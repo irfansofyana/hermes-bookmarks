@@ -21,10 +21,11 @@ def start_enrichment(ctx):
     route=config('enrichment_route',None)
     if not root or not route: return 'configuration_required'
     if not isinstance(root,str) or not Path(root).is_absolute(): return 'configuration_required'
+    if not isinstance(route,dict) or not route.get('owner_profile'): return 'configuration_required'
+    if getattr(ctx,'profile_name',None)!=route['owner_profile']: return 'not_owner'
     queue=JobQueue(Path(root))
     try: queue.configure_route(route)
     except ValueError: return 'route_conflict'
-    if getattr(ctx,'profile_name',None)!=route['owner_profile']: return 'not_owner'
     spawn=getattr(ctx,'spawn_task',None)
     if not callable(spawn): return 'supervisor_unavailable'
     try: asyncio.get_running_loop()

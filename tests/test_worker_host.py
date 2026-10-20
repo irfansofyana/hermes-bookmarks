@@ -35,5 +35,11 @@ class WorkerHostTests(unittest.TestCase):
     def test_nonowner_profile_cannot_change_execution_identity(self):
         with tempfile.TemporaryDirectory() as d:
             ctx=self.context(d,'other')
+            self.route['model']='stale-nonowner-model'
             self.assertEqual(start_enrichment(ctx),'not_owner')
             self.assertEqual(self.calls,[])
+            self.assertFalse((Path(d)/'bookmarks.sqlite3').exists())
+            owner=self.context(d,'owner')
+            self.assertEqual(start_enrichment(owner),'host_loop_unavailable')
+            from bookmarks.jobs import JobQueue
+            self.assertEqual(JobQueue(Path(d)).route()['model'],'pinned')

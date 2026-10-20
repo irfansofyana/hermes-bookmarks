@@ -84,8 +84,8 @@ class JobQueue:
 
     def complete(self,job_id,worker_id,result,*,token,now=None):
         values=validate_result(result)
-        now=time.time() if now is None else now
         with self.storage._transaction(write=True) as c:
+            now=time.time() if now is None else now
             job=c.execute("SELECT * FROM jobs WHERE id=? AND state='running' AND worker=? AND token=? AND expires>?",(job_id,worker_id,token,now)).fetchone()
             if job is None: return False
             applied=c.execute("UPDATE items SET summary=?, tags=?, enrichment_status='succeeded', revision=revision+1 WHERE id=? AND revision=?",
@@ -95,10 +95,10 @@ class JobQueue:
             return bool(applied)
 
     def fail(self,job_id,worker_id,code,*,token,now=None):
-        now=time.time() if now is None else now
         # Error codes only: publisher/provider exception strings can contain secrets.
         if code not in {'provider_failed','extraction_failed','invalid_result','configuration_required'}: code='provider_failed'
         with self.storage._transaction(write=True) as c:
+            now=time.time() if now is None else now
             job=c.execute("SELECT * FROM jobs WHERE id=? AND state='running' AND worker=? AND token=? AND expires>?",(job_id,worker_id,token,now)).fetchone()
             if job is None: return False
             state='failed' if job['attempts']>=3 or code=='configuration_required' else 'pending'

@@ -34,6 +34,39 @@ class JobTests(unittest.TestCase):
     def test_completion_rejects_expired_lease_without_recovery(self):
         self.enqueue(); a=self.q.claim('a',100,30)
         self.assertFalse(self.q.complete(a['id'],'a',self.result,token=a['token'],now=130))
+    def assert_lock_wait_does_not_extend_lease(self,operation):
+        from concurrent.futures import ThreadPoolExecutor
+        from contextlib import closing, contextmanager
+        from threading import Event
+        from unittest.mock import patch
+        import sqlite3
+        job=self.enqueue(); claim=self.q.claim('worker',100,1)
+        clock=[100.0]; attempted=Event()
+        transaction=self.q.storage._transaction
+        @contextmanager
+        def watched(*,write=False):
+            attempted.set()
+            with transaction(write=write) as connection: yield connection
+        with closing(sqlite3.connect(self.q.storage.database_path,isolation_level=None)) as blocker:
+            blocker.execute('BEGIN IMMEDIATE')
+            with patch('bookmarks.jobs.time.time',side_effect=lambda:clock[0]), patch.object(self.q.storage,'_transaction',watched), ThreadPoolExecutor(max_workers=1) as pool:
+                value=self.result if operation=='complete' else 'provider_failed'
+                future=pool.submit(getattr(self.q,operation),job,'worker',value,token=claim['token'])
+                try:
+                    self.assertTrue(attempted.wait(2),'Mutation did not reach the held SQLite lock')
+                    clock[0]=102.0
+                finally: blocker.commit()
+                applied=future.result(timeout=3)
+        self.assertFalse(applied,'Expired claim mutated storage after lock acquisition')
+        self.assertEqual(self.q.get(job)['state'],'running')
+        self.assertEqual(self.service.get(self.item['id'])['summary'],'')
+
+    def test_completion_rechecks_production_clock_after_write_lock(self):
+        self.assert_lock_wait_does_not_extend_lease('complete')
+
+    def test_failure_rechecks_production_clock_after_write_lock(self):
+        self.assert_lock_wait_does_not_extend_lease('fail')
+
     def test_restart_recovers_pending_and_completion_only_once(self):
         job=self.enqueue(); q=JobQueue(self.root); a=q.claim('a',100,30)
         self.assertTrue(q.complete(job,'a',self.result,token=a['token'],now=110))

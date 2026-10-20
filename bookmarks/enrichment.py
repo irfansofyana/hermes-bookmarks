@@ -22,28 +22,55 @@ async def generate(llm,text,settings,source_url):
     return output
 
 
-async def run_worker(queue,service,llm,fetch,*,poll_seconds=1):
+def _raise_if_cancelled():
+    owner=asyncio.current_task()
+    if owner is not None and owner.cancelling(): raise asyncio.CancelledError
+
+
+async def _storage_call(function,*args,**kwargs):
+    """Own executor work until it finishes, including repeated cancellation.
+
+    SQLite work already admitted may commit while shutdown waits. Cancellation
+    is acknowledged only after it settles; no mutation outlives the worker.
+    """
+    _raise_if_cancelled()
+    operation=asyncio.create_task(asyncio.to_thread(function,*args,**kwargs))
+    try:
+        return await asyncio.shield(operation)
+    except asyncio.CancelledError as cancelled:
+        while not operation.done():
+            try: await asyncio.shield(operation)
+            except asyncio.CancelledError: continue
+        # Observe real storage errors rather than classifying them as aborts.
+        operation.result()
+        raise cancelled
+
+
+async def run_worker(queue,service,llm,fetch,*,poll_seconds:float=1):
     worker_id=str(uuid4())
     while True:
-        await asyncio.to_thread(queue.recover_expired)
-        job=await asyncio.to_thread(queue.claim,worker_id,lease_seconds=120)
+        await _storage_call(queue.recover_expired)
+        job=await _storage_call(queue.claim,worker_id,lease_seconds=120)
         if job is None:
             await asyncio.sleep(poll_seconds); continue
         try:
             settings=job['settings']
             if not settings.get('provider') or not settings.get('model'):
-                await asyncio.to_thread(queue.fail,job['id'],worker_id,'configuration_required',token=job['token']); continue
-            item=await asyncio.to_thread(service.get,job['item_id'])
+                await _storage_call(queue.fail,job['id'],worker_id,'configuration_required',token=job['token']); continue
+            item=await _storage_call(service.get,job['item_id'])
             try: text=await fetch(item['url'])
             except asyncio.CancelledError: raise
             except Exception:
-                await asyncio.to_thread(queue.fail,job['id'],worker_id,'extraction_failed',token=job['token']); continue
+                await _storage_call(queue.fail,job['id'],worker_id,'extraction_failed',token=job['token']); continue
+            _raise_if_cancelled()
             result=await asyncio.wait_for(generate(llm,text,settings,item['url']),timeout=60)
-            await asyncio.to_thread(queue.complete,job['id'],worker_id,result,token=job['token'])
+            await _storage_call(queue.complete,job['id'],worker_id,result,token=job['token'])
         except asyncio.CancelledError:
-            # Leave the durable lease to expire; no late partial result is applied.
+            # In-flight DB work is drained before acknowledgement. Any remaining
+            # live claim is recovered after lease expiry; new writes are blocked.
             raise
         except Exception:
-            await asyncio.to_thread(queue.fail,job['id'],worker_id,'provider_failed',token=job['token'])
+            if asyncio.current_task().cancelling(): raise
+            await _storage_call(queue.fail,job['id'],worker_id,'provider_failed',token=job['token'])
         finally:
-            await asyncio.sleep(poll_seconds)
+            if not asyncio.current_task().cancelling(): await asyncio.sleep(poll_seconds)
