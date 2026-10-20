@@ -1,5 +1,8 @@
 name: hermes-bookmarks
 version: "0.1.0"
-description: Read-only Hermes Bookmarks foundation preview; capture and native chat are not yet implemented
-provides_tools: []
+description: Shared bookmark capture and search for Hermes Desktop, Dashboard and native tools; development preview
+provides_tools:
+  - bookmark_save
+  - bookmark_get
+  - bookmark_search
 provides_hooks: []

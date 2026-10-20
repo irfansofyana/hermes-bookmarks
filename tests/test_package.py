@@ -19,7 +19,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
         dashboard = json.loads((ROOT / 'dashboard/manifest.json').read_text())
         self.assertEqual(native['name'], dashboard['name'])
         self.assertEqual(native['version'], dashboard['version'])
-        self.assertEqual(native['provides_tools'], [])
+        self.assertEqual(native['provides_tools'], ['bookmark_save', 'bookmark_get', 'bookmark_search'])
         self.assertEqual(native['provides_hooks'], [])
         self.assertNotIn('requires_hermes', native)
         self.assertTrue((ROOT / 'dashboard' / dashboard['entry']).is_file())
@@ -33,11 +33,16 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
-        self.addCleanup(lambda: sys.modules.pop(spec.name, None))
+        self.addCleanup(lambda: [sys.modules.pop(n, None) for n in list(sys.modules) if n == spec.name or n.startswith(spec.name + '.')])
         spec.loader.exec_module(module)
         commands = []
-        context = SimpleNamespace(register_command=lambda **kwargs: commands.append(kwargs))
+        tools, cleanups = [], []
+        context = SimpleNamespace(register_command=lambda **kwargs: commands.append(kwargs),
+                                  register_tool=lambda **kw: tools.append(kw),
+                                  get_config=lambda key, default=None: default, on_unload=cleanups.append)
+        self.addCleanup(lambda: [f() for f in reversed(cleanups)])
         module.register(context)
+        self.assertEqual([t['name'] for t in tools], ['bookmark_save', 'bookmark_get', 'bookmark_search'])
         self.assertEqual([c['name'] for c in commands], ['bookmarks-status'])
         payload = json.loads(commands[0]['handler']('', unused_host_keyword=True))
         self.assertEqual(payload['stage'], 'foundation_preview')
@@ -64,4 +69,4 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
                 with self.subTest(method=method):
                     result = await getattr(client, method)('/api/plugins/hermes-bookmarks/health')
                     self.assertEqual(result.status_code, 405)
-        self.assertEqual([(r.path, r.methods) for r in module.router.routes], [('/health', {'GET'})])
+        self.assertIn(('/items', {'GET'}), [(r.path, r.methods) for r in module.router.routes])

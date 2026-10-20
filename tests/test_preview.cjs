@@ -15,16 +15,14 @@ test('declared Dashboard entry registers an honest foundation preview', () => {
   const source = fs.readFileSync(path.join(root, 'dashboard', manifest.entry), 'utf8');
   const registered = [];
   // Public-shaped SDK double only; not a rendered/installed-host UI claim.
-  const sdk = { React: { createElement: (tag, props, ...children) => ({ tag, props, children }) } };
+  const sdk = { React: require('react'), fetchJSON: async () => ({ok:true, result:{items:[],total:0}}) };
   vm.runInNewContext(source, { window: {
     __HERMES_PLUGIN_SDK__: sdk,
     __HERMES_PLUGINS__: { register: (id, render) => registered.push({ id, render }) },
   } });
   assert.equal(registered.length, 1);
   assert.equal(registered[0].id, manifest.name);
-  const tree = registered[0].render();
-  assert.match(JSON.stringify(tree), /Bookmarks/);
-  assert.match(JSON.stringify(tree), /Foundation preview/);
-  assert.match(JSON.stringify(tree), /not yet available/);
+  assert.equal(typeof registered[0].render, 'function');
+  // Actual render/interaction is exercised with real React in test_ui.cjs.
   assert.throws(() => vm.runInNewContext(source, { window: {} }), /Dashboard SDK is unavailable/);
 });

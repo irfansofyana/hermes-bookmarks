@@ -1,7 +1,10 @@
-"""Hermes Bookmarks foundation preview. Registration only; no storage on import."""
+"""Hermes Bookmarks native registration. No storage/inference on import."""
 from .host_bindings import register_foundation
+from .native_tools import register_tools
+from .runtime import bind_runtime
 
 
 def register(ctx):
-    """Keep the native entrypoint independent of the path-loaded HTTP adapter."""
+    bind_runtime(ctx)
     register_foundation(ctx)
+    register_tools(ctx)

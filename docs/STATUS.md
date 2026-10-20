@@ -2,9 +2,9 @@
 
 ## Current stage and approval
 
-The owner approved M1 execution using subagents on 2026-10-20. Active branch: `feat/m1-native-foundation`; isolated worktree: `m1`, based on `e7e0cc91cf71724c9d3caf7978308be462c78a77`. Do not ask for execution-method approval again.
+The owner approved M1 execution using subagents on 2026-10-20, then approved switching to hybrid execution after Task 2 review. From Task 3, the controller implements directly with TDD, targeted independent reviews for concurrency/security boundaries, and a final whole-branch review. Do not restart completed tasks or ask for execution-method approval again. Active branch: `feat/m1-native-foundation`; isolated worktree: `m1`, based on `e7e0cc91cf71724c9d3caf7978308be462c78a77`.
 
-**Task 1 is independently approved with two nonblocking minors; Task 2 is implemented and locally verified, awaiting independent review.** The minimal `hermes-bookmarks` `0.1.0` package still registers only `/bookmarks-status`, a read-only health API and an honest Dashboard preview page. Task 2 adds a host-independent durable save/get/search service, not native capture tools or a connected library UI. Desktop UI, enrichment worker, assets, and contextual Ask Hermes remain unimplemented. M1 is not complete and the package is not approved for live installation or release.
+**Tasks 1 and 2 are independently approved; Task 3 is implemented and locally verified in hybrid mode.** The package registers native save/get/search, shared HTTP routes and both emitted library interfaces. Enrichment, image transport and native context handoff are not yet complete. See `docs/verification/capture.md` for current 40-Python/4-Node test evidence and successful isolated official validation. No live-host acceptance, paid inference, deployment or remote CI is claimed. M1 remains incomplete.
 
 Task 1 commit: `a51a493e07aa76b72a1cbc3dd03505ee7a793927`, subject `chore: establish documented Hermes plugin boundaries`. Its review approved package/contract scope, not host/milestone acceptance. The composer-getter evidence wording and temporary test-package child-module cleanup remain recorded minors for an appropriate later task; neither was changed in Task 2.
 
@@ -41,13 +41,13 @@ Exact command outputs and files are in the Task 1 report. Top-level test-harness
 - Self-review added and observed RED regressions for unsafe unescaped ASCII URL characters and a raw embedded-NUL root error, then fixed both. Initial fixture-only SQLite ResourceWarnings were traced to unclosed test connections and fixed with explicit closing; no warnings suppressed. An initial 3.11 run printed the existing async-router test's nonfatal 0.104-second slow-callback diagnostic; it passed and is retained in the detailed report. Final whole-suite reruns (required plain command on 3.14; `-B -W error` on 3.11) each passed all 33 tests with clean output.
 - `rtk git diff --check` and staged equivalent — exit 0 before commit. All synthetic libraries/fixtures used configured scratch via `TMPDIR`. No new package installation, live host validation, remote CI, paid inference, active-library access or service restart in Task 2.
 
-Committed evidence: `docs/verification/service.md`. Detailed command/stdout/stderr/exit-code records and self-review are in the local Task 2 report. **Task 2 has not been independently reviewed.**
+Committed evidence: `docs/verification/service.md`. Detailed command/stdout/stderr/exit-code records and self-review are in the local Task 2 report. Task 2 independent review approved spec compliance and code quality with no blocking findings.
 
 ## Acceptance concerns and skipped checks
 
 - **Dashboard contextual handoff blocker:** native `/chat?resume=<id>&profile=<name>` navigation is documented, but a supported session-bound editable-draft/context API was not found in the inspected SDK. Basic resume navigation alone is not Ask Hermes acceptance. Keep contextual action unavailable rather than intercepting DOM or writing terminal input.
 - **Desktop handoff unverified:** public source has session-addressed composer/navigation/identity APIs; actual mounted target, installed-build exports, race-safe draft preservation and library-state retention still need Task 4 proof. No embedded public chat component or atomic conditional draft replace is claimed.
-- Built-in `plugin_data_dir` follows the active profile. Required shared installation root is still not resolved by a host binding; the Task 2 service now consumes only an explicit absolute `data_root: pathlib.Path`, with no silent profile fallback. This is not proof of shared-root selection or cross-backend sync.
+- Built-in `plugin_data_dir` follows the active profile. Task 3 binds an explicitly configured absolute `settings.library_root` via the plugin-owned registration bridge, with no silent profile fallback. This is not proof of shared-root selection or cross-backend sync.
 - Python lifecycle methods are source-visible candidates, not proof of a documented persistent service owner/running loop/cold-start worker. Stable library-selected inference route and lifecycle remain Task 5 gates. Task 2 schedules no work.
 - Real host auth/approvals and remote asset transport are not tested. Direct router tests have no host authentication middleware and do not prove unauthorized rejection. No paid inference, actual native chat turn, rendered browser/theme check, real-vault access or live deployment performed.
 - SQLite FTS5 is required; local locking/persistence were tested, not power-loss fault injection or network-filesystem correctness. Prolonged contention can return a safe storage error after the bounded five-second SQLite wait. URL syntax validation is not network-fetch/SSRF authorization.
@@ -58,7 +58,7 @@ Continue independent safe tasks under the preflight ruling; these limits block t
 
 | Milestone | State | Next deliverable |
 | --- | --- | --- |
-| M1 native foundation | Execution approved; Task 1 reviewed with minors; Task 2 service implemented pending review; Tasks 3–6 pending | Independent Task 2 review, then next scoped task |
+| M1 native foundation | Hybrid execution; Tasks 1–3 locally complete; Tasks 4–6 pending | Native chat handoff |
 | M2 organization/import | Roadmapped; not implemented | Detail against established M1 contracts |
 | M3 notes/images/enrichment | Roadmapped; not implemented | Detail against working jobs/assets |
 | M4 polished UI/native workflow | Roadmapped; not implemented | Emitted UI and real-host visual evidence |
@@ -66,7 +66,7 @@ Continue independent safe tasks under the preflight ruling; these limits block t
 
 ## Next runnable action
 
-Controller independently reviews the Task 2 commit and its RED/GREEN report. If approved, continue with the next scoped task brief, using `BookmarkService(data_root)` rather than implementing a second library. Resolve the installation-owned root through a verified host binding before connecting any adapter; do not infer it from active-profile helpers. Existing health/status readiness stays false until its integration task actually establishes readiness.
+Continue directly with Task 4 native handoff using the approved hybrid execution method. Task 2 review approved both axes without blockers. Task 3 now resolves an explicitly configured shared root through a plugin-owned lifecycle bridge; cold-host/multi-profile transport evidence is still needed. Do not infer full readiness from the preview health endpoint.
 
 ## Repository provenance
 
