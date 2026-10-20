@@ -2,7 +2,7 @@
 
 A planned standalone bookmark and image library for Hermes Desktop, Dashboard, and native chat tools.
 
-**Status: design stage. This repository contains a draft specification, not an installable plugin.** No runtime implementation or host compatibility is claimed yet.
+**Status: implementation planning.** Product direction is agreed; the first milestone plan awaits review. This is not yet an installable plugin, and host compatibility has not been exercised.
 
 ## Product direction
 
@@ -16,7 +16,9 @@ A planned standalone bookmark and image library for Hermes Desktop, Dashboard, a
 
 ## Design
 
-Read the [draft specification](docs/superpowers/specs/2026-10-20-hermes-bookmarks-design.md). Product choices have been discussed; this consolidated document still requires review before an implementation plan is approved.
+Read the [specification](docs/superpowers/specs/2026-10-20-hermes-bookmarks-design.md), [delivery roadmap](docs/ROADMAP.md), and [M1 implementation plan](docs/superpowers/plans/2026-10-20-m1-native-foundation.md).
+
+Future sessions should start with [AGENTS.md](AGENTS.md) and [development status](docs/STATUS.md). These record progress, permissions, unverified integrations, and the next action.
 
 ## Implementation references
 
@@ -27,9 +29,9 @@ The official documentation is the integration contract. Blogwatcher is a referen
 
 ## Delivery gates
 
-1. Review the written specification.
-2. Verify the required Hermes APIs and document capability boundaries.
-3. Write and approve an implementation plan and choose its execution method.
-4. Build test-first and verify Desktop, Dashboard, and native chat tools separately.
+1. Review the first milestone plan and choose its execution method.
+2. Build a thin working slice, verifying public Hermes APIs during development.
+3. Implement remaining milestones test-first, updating evidence and handoff after each task.
+4. Verify Desktop, Dashboard, native chat tools, and release portability separately.
 
 No install command is provided until a working package exists. No service deployment, catalog submission, or release is implied by this repository.

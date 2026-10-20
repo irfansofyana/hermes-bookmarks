@@ -1,7 +1,7 @@
 # Hermes Bookmarks — Design specification
 
 Date: 2026-10-20
-Status: Draft for written-spec review; not an implementation approval.
+Status: Product direction approved for implementation planning; detailed milestone plan review precedes product implementation.
 Repository: irfansofyana/hermes-bookmarks (public).
 
 ## 1. Intent and agreed constraints
@@ -192,9 +192,9 @@ Use unit, integration, emitted-bundle, browser, and real-host verification. Run 
 
 Deferred: profile-private libraries, semantic search, multi-user sharing, independent-backend sync, browser extension, highlights, full-page archival, PDF/video support, and separate appearance overrides.
 
-Before implementation planning is finalized, record a host-version compatibility matrix for native-chat composition/handoff, composer and context APIs, exported components, session identity, and model selection separately on Desktop and Dashboard. Publicly unavailable chat composition is a documented limitation, never permission for a custom chat UI or core patch. Also inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
+Resolve these engineering gates inside the first development milestone before dependent feature work, not through a separate prerequisite research project. Record a host-version compatibility matrix for native-chat composition/handoff, composer and context APIs, exported components, session identity, and model selection separately on Desktop and Dashboard. Publicly unavailable chat composition is a documented limitation, never permission for a custom chat UI or core patch. Also inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
 
-No runtime compatibility, installation, catalog listing, or release is established by this document. Next: owner review of this written spec, then an implementation plan and execution-method selection.
+No runtime compatibility, installation, catalog listing, or release is established by this document. Next: review the detailed milestone implementation plan and select its execution method.
 
 ## References
 
