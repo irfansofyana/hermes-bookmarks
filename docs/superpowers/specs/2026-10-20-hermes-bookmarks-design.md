@@ -12,7 +12,9 @@ Desktop, Dashboard, and native Hermes chat tools are equal entrypoints. AI taggi
 
 One shared library per Hermes backend installation is the v1 default and only library mode. Switching agent profiles does not change the library or enrichment settings. Clients connected to different backends do not automatically synchronize. Profile-private libraries and multi-user sharing are deferred. Profiles are not an authorization boundary; only principals authorized by the backend's access policy may use this shared library. Verify that boundary before deployment.
 
-The owner requires adherence to official Hermes documentation and has identified irfansofyana/hermes-blogwatcher as a working implementation reference. Avoid Hermes core modifications and private-API assumptions.
+The owner requires adherence to official Hermes documentation and has identified irfansofyana/hermes-blogwatcher as a working implementation reference. Reuse public Hermes SDKs, exported components, libraries, and supported extension points. Do not modify Hermes core, fork its chat implementation, import private modules, monkey-patch host behavior, or reach into host DOM/React internals. Availability must be checked against the chosen host version on both surfaces.
+
+Native Hermes chat integration is required. A custom transcript renderer, composer, agent loop, model-picker implementation, or provider credential store is out of scope and prohibited as a workaround. If the public SDK cannot provide a requested composition, expose the supported native-chat handoff and document the limitation. Any change to this boundary requires owner approval.
 
 ## 2. User experience
 
@@ -21,6 +23,34 @@ Provide a dedicated Bookmarks page in Desktop and Dashboard. Navigation includes
 Saving a link creates a durable item immediately. Extraction and enrichment status is visible and updates without stealing focus. A failed fetch or model request leaves the saved item usable. Show actionable errors and explicit retry actions. Reading an item or saved summary does not fetch the publisher again, invoke inference, or silently change its read state.
 
 Support keyboard-accessible controls and visible pending, empty, failure, disabled, and save states. Do not hide essential actions behind hover alone.
+
+### 2.1 Visual design and interaction quality
+
+The UI must feel like a polished AI-native bookmark application within Hermes. Use the host's public components and theme tokens for controls, typography, colors, focus treatment, and spacing where available. Apply the owner's design-system guidance only where compatible with the active host theme; host appearance takes precedence over fixed branded colors or fonts. No mockup is required before implementation, but rendered visual verification is required before release.
+
+- Establish a clear hierarchy: page title and search, collection/filter context, item titles, then quieter source/date metadata. Keep secondary actions out of the reading path without making them inaccessible.
+- Make grid cards image-led with consistent cover geometry and a deliberate missing-image fallback. List view favors scanning titles and metadata. Avoid oversized empty cards, dense badge stacks, decorative gradients, and competing primary buttons.
+- Keep notes and summaries comfortable to read with restrained line length, clear headings, and adequate whitespace. Label generated, imported, and user-authored content distinctly without turning the detail view into a status dashboard.
+- Use one clear Add action with URL paste and image upload. Preserve manual organization as optional during capture. Contextual bulk actions appear after explicit selection and show the affected count.
+- Provide a visible Ask Hermes action for an item, selection, or collection. Make the context being handed to chat understandable before sending. AI status should be useful and unobtrusive; never invent progress percentages or present queued work as completed.
+- Preserve search, filters, selection, and scroll position when moving between library, detail, and native chat. Keep in-progress note edits safe. Native-chat navigation must not reset the library or discard a draft.
+- Use responsive layouts with no page-level horizontal overflow. On narrow screens, use a full-height detail flow and reachable actions rather than squeezing the desktop columns. Do not depend on hover or drag-and-drop as the only interaction.
+- Provide visible keyboard focus, accessible names, keyboard alternatives to drag actions, adequate contrast, and reduced-motion behavior. Loading placeholders reserve layout space; errors preserve user input and offer a clear retry.
+- Pending actions disable only conflicting controls. Prevent duplicate submissions; show saved confirmation only after persistence succeeds. Provide recoverable trash and a straightforward restore path.
+
+### 2.2 Native Hermes conversation experience
+
+The user wants their usual Hermes conversation experience while working with the library. Reuse the actual host chat surface and public SDK integration; do not build an imitation within the plugin.
+
+Preferred composition: expose the bookmark library alongside native Hermes chat using supported host layout or pane APIs. Embed a host-provided chat component only if it is publicly exported and documented for plugin use. Where a host cannot compose both views, provide an explicit Open in Hermes chat handoff through a supported navigation/composer API, preserve library state, and make returning easy. Treat Desktop and Dashboard as separate capability checks. If no supported handoff exists on either target, report a compatibility blocker rather than claiming parity or adding a custom chat implementation.
+
+Expected chat capabilities are inherited from the selected native host surface: Markdown, tables/code, streaming replies, tool activity and results, explicit plans/task progress, approvals and clarification requests, interruption, session history/resume, and host-supported model/provider selection. Verify which are available in each target version and record limitations. Do not recreate missing host features or fabricate tool/progress events. Planning means user-visible plans emitted by Hermes; hidden reasoning is not a product requirement.
+
+An Ask Hermes action identifies a bookmark, selected items, or a collection and sends bounded references and a user-editable request through the supported composer/context mechanism. Let native tools retrieve authorized details on demand. Do not inject the entire library, private notes, or embedded note images automatically. Showing or preparing a draft does not itself submit a message or incur inference cost. Any Send action must be explicit and target the intended session; do not overwrite an existing draft or fall through to an unrelated chat.
+
+Keep conversation ownership explicit: use the selected Hermes profile/session, its identity, enabled tools, approvals, and history. Shared library access does not merge chat histories across profiles. Native chat uses the session's host-managed model and provider; background enrichment uses the library's separately configured execution route. Changing one must not silently change the other. Do not add a second chat model picker or credential form.
+
+Library changes made by native tools must refresh the relevant view through supported events or bounded query invalidation, without losing unsaved notes or current selection. Bookmark summaries and chat responses remain separate records; do not copy a conversation response into personal notes without an explicit save action.
 
 ## 3. Theme behavior
 
@@ -64,7 +94,37 @@ Reuse documented Hermes provider/inference configuration where supported and avo
 
 Native registered tools must use the same business logic as UI routes, not browser automation. Provide capabilities to save links, add image items, search/filter, retrieve details and saved summaries, update metadata and notes, manage nested collections, trash/restore, request enrichment, inspect jobs, manage settings, and import/export.
 
-Names such as bookmark_save, bookmark_search, bookmark_get, bookmark_update, bookmark_enrich, bookmark_settings_get, and bookmark_settings_update are provisional. Define schemas in the implementation plan. Return stable IDs, structured errors, processing status, and pagination metadata. A save response must not claim enrichment has finished while a job remains pending. Reading saved data has no inference side effect.
+### Proposed tool inventory
+
+These are intended native registrations, not tools already implemented. Final argument schemas require review in the implementation plan.
+
+| Tool | Responsibility |
+| --- | --- |
+| `bookmark_save` | Save a link or image item, with optional metadata, notes, attachment references, and enrichment preference. |
+| `bookmark_search` | Search/filter with bounded pagination. |
+| `bookmark_get` | Read details, notes, saved summary, attachment references, and processing status. |
+| `bookmark_update` | Revision-aware updates to metadata, tags, collection, favorite/read-later state. |
+| `bookmark_note_update` | Append or explicitly replace personal notes without altering generated summaries. |
+| `bookmark_delete` | Move an item to recoverable trash. |
+| `bookmark_restore` | Restore a trashed item. |
+| `bookmark_attachment_add` | Store an authorized image and return a durable attachment ID. |
+| `bookmark_attachment_get` | Return metadata and a supported authorized access reference. |
+| `bookmark_attachment_remove` | Remove an association safely, checking remaining references. |
+| `bookmark_collection_list` | Read the collection hierarchy. |
+| `bookmark_collection_create` | Create a root or nested collection. |
+| `bookmark_collection_update` | Rename or move a collection, rejecting cycles. |
+| `bookmark_collection_delete` | Delete a collection with an explicit contents policy. |
+| `bookmark_tag_list` | Discover existing tags and reduce near-duplicates. |
+| `bookmark_import_preview` | Validate normalized records or a supported file and preview changes without library writes. |
+| `bookmark_import_start` | Start a persistent import from a validated preview and explicit options. |
+| `bookmark_job_get` | Read import, export, or enrichment progress and reconciled results. |
+| `bookmark_job_cancel` | Cancel remaining work and report already-completed effects. |
+| `bookmark_export_start` | Create a downloadable selected/full-library export. |
+| `bookmark_enrich` | Request tags and/or summaries for selected items and return a job ID. |
+| `bookmark_settings_get` | Read library configuration without secrets. |
+| `bookmark_settings_update` | Apply validated library-setting changes through supported mechanisms. |
+
+Return stable IDs, structured errors, processing status, and pagination metadata. A save response must not claim enrichment has finished while a job remains pending. Reading saved data has no inference side effect.
 
 Writes require explicit scope and validation. Bulk destructive actions and permanent deletion require a genuine user-approval mechanism, not a model-provided boolean treated as proof. Validate any filesystem/attachment reference passed to a tool; arbitrary paths are not an implicit file-access grant. Verify the host-supported upload mechanism for chat attachments.
 
@@ -74,11 +134,21 @@ Both are product requirements. Prioritize import implementation for the first re
 
 Initial import target: browser/Raindrop-compatible bookmark HTML. Verify actual source-format behavior with representative fixtures before claiming compatibility. Preview counts and nested collection mappings, detect duplicates, preserve supported metadata, offer explicit enrichment opt-in, and provide progress/cancellation and imported/skipped/failed results. Cancellation retains already committed items and reports partial completion. Retry behavior must not create duplicate items. Unsupported fields should be disclosed, not silently represented as preserved.
 
+### Chat-driven migration from existing files
+
+Accept normalized records as a first-release import input alongside bookmark HTML. Hermes can read explicitly selected source files with its existing authorized file tools, interpret their structure, and submit records to the plugin. No dedicated Obsidian, X, or GitHub importer, live-account connector, or two-way vault sync is required in v1. Reading a source file is not permission to scan the entire vault or upload all its contents.
+
+Records may carry original URL, title, collection path, tags, personal notes, imported source text/summary with provenance, attachment references, and a stable source identifier. Preserve imported content without labeling it as newly generated or independently verified. A local path must be transferred through a supported attachment mechanism when the backend is remote.
+
+Use bounded batches or an authorized staged file for large migrations. Preview field mappings, duplicates, unsupported content, and errors without changing the library. Bind execution to the validated input and options; reject a changed payload rather than executing a stale preview. Support explicit duplicate/conflict policy, idempotent retries, durable job IDs, cancellation, and a report reconciling imported/skipped/failed entries. Never overwrite notes edited after import without an explicit conflict decision.
+
+Source files remain unchanged. Import defaults to no publisher fetch and no AI enrichment; either needs explicit opt-in. The preview validates submitted records, not the completeness of the agent's extraction. Preserve source references and extraction warnings so missing or ambiguous entries can be reviewed. Do not create bookmarks from every incidental link without user-approved extraction criteria.
+
 Export targets: portable bookmark HTML for links and a versioned full-fidelity bundle covering items, collections, tags, notes, summaries, settings without secrets, and attachments. Define round-trip behavior and validate it with fixtures. Protect against traversal and unsafe payloads when importing archive-based backups. Browser HTML cannot be presented as a lossless backup of rich notes and uploaded images.
 
 ## 9. Architecture proposal
 
-Use one shared backend service layer, SQLite persistence, backend-owned attachment storage, and persistent enrichment jobs. Thin native-tool and authenticated HTTP adapters call the same service. Share UI components and scoped styles where feasible, but emit distinct Desktop and Dashboard entrypoints using their documented SDKs.
+Use one shared backend service layer, SQLite persistence, backend-owned attachment storage, and persistent enrichment jobs. Thin native-tool and authenticated HTTP adapters call the same service. Native conversation rendering, session lifecycle, model selection, approvals, and tool execution remain host-owned; the plugin contributes contextual actions and native tools only. Background enrichment and conversational agent turns are separate integration paths. Share UI components and scoped styles where feasible, but emit distinct Desktop and Dashboard entrypoints using their documented SDKs.
 
 Keep storage, item/collection operations, notes/assets, import/export, extraction, inference, jobs, and host adapters separately testable. Database migrations must preserve existing user data. Resolve a shared installation-level data root explicitly; do not silently use an active-profile path and thereby create separate libraries.
 
@@ -109,6 +179,12 @@ The implementation must demonstrate:
 - Host theme switching works on both interfaces at wide and narrow widths.
 - Export/restore preserves supported metadata, notes, and assets; lossy HTML limitations are explicit.
 - URL, upload, note-rendering, and authorization protections are exercised.
+- Ask Hermes uses the actual native host chat, preserves existing drafts and library state, and targets the intended session. Missing capabilities fail visibly instead of sending to another session.
+- Native Markdown, tool-call, plan/progress, approval, stop, and history behavior is exercised and documented per host version; no custom replacement renderer or agent loop is introduced.
+- Chat profile/model selection remains independent of shared-library enrichment settings. Context transfer is bounded and explicit.
+- A chat-driven normalized-record import preserves notes, tags, provenance, and attachments, survives retry/cancellation, and leaves source files unchanged.
+- Real rendered UI is reviewed in both themes and at wide/narrow widths, including long titles, missing covers, rich notes, multi-selection, empty/error states, keyboard navigation, and theme changes. Capture screenshots and check layout and console errors.
+- Source and dependency review confirms no Hermes core changes, private-module imports, DOM interception, copied internal chat components, or duplicate chat/provider implementation.
 
 Use unit, integration, emitted-bundle, browser, and real-host verification. Run the official plugin validator against the targeted host version. Report mocked inference, synthetic preview data, skipped tests, and real model tests separately. Paid inference tests require authorization. Deployment/restarts require separate approved scope; do not alter live plugins while developing.
 
@@ -116,7 +192,7 @@ Use unit, integration, emitted-bundle, browser, and real-host verification. Run 
 
 Deferred: profile-private libraries, semantic search, multi-user sharing, independent-backend sync, browser extension, highlights, full-page archival, PDF/video support, and separate appearance overrides.
 
-Before implementation planning is finalized, inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
+Before implementation planning is finalized, record a host-version compatibility matrix for native-chat composition/handoff, composer and context APIs, exported components, session identity, and model selection separately on Desktop and Dashboard. Publicly unavailable chat composition is a documented limitation, never permission for a custom chat UI or core patch. Also inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
 
 No runtime compatibility, installation, catalog listing, or release is established by this document. Next: owner review of this written spec, then an implementation plan and execution-method selection.
 
