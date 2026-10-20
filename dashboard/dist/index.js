@@ -3,10 +3,48 @@
 'use strict';
 const SDK = window.__HERMES_PLUGIN_SDK__;
 if (!SDK?.React || !SDK.fetchJSON) throw Error('Hermes Dashboard SDK is unavailable');
+function createNativeChat(host) {
+  function snapshot() {
+    const id = host?.state?.focusedStoredSessionId?.get?.();
+    const owner = host?.state?.focusedSessionOwner?.get?.();
+    return typeof id === 'string' && owner?.connectionId && owner?.profile
+      ? {sessionId:id, owner:{connectionId:owner.connectionId,profile:owner.profile}} : null;
+  }
+  function same(target) {
+    const current = snapshot();
+    return current && target && current.sessionId === target.sessionId &&
+      current.owner.connectionId === target.owner?.connectionId && current.owner.profile === target.owner?.profile;
+  }
+  return {snapshot, async prepare({target,itemIds,prompt,append=false} = {}) {
+    const fail = reason => ({ok:false,reason});
+    if (!host?.composer?.getDraft || !host?.composer?.insertText || !host?.openSession || !host?.profileRoutes) return fail('unsupported');
+    if (!Array.isArray(itemIds) || !itemIds.length || itemIds.length > 20 ||
+        itemIds.some(id => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(id)) ||
+        typeof prompt !== 'string' || !prompt.trim() || prompt.length > 2000) return fail('invalid_context');
+    if (!same(target)) return fail('target_changed');
+    try {
+      const routes = await host.profileRoutes();
+      const route = routes.find(r => r.connectionId === target.owner.connectionId && r.targetProfile === target.owner.profile);
+      if (!route) return fail('route_unavailable');
+      if (!same(target)) return fail('target_changed');
+      await host.openSession(target.sessionId, {route, awaitHydration:true});
+      if (!same(target)) return fail('target_changed');
+      const draft = await host.composer.getDraft(target.sessionId);
+      if (!same(target)) return fail('target_changed');
+      if (draft && !append) return fail('draft_not_empty');
+      // Always insert, never set/replace. User typing after the lookup is kept.
+      const text = prompt.trim() + '\n\nSaved bookmark IDs (use bookmark_get for details):\n' + itemIds.map(id => '- ' + id).join('\n');
+      const applied = await host.composer.insertText(target.sessionId, text, {mode:'block'});
+      return applied ? {ok:true} : fail('composer_unavailable');
+    } catch (e) { return fail('native_handoff_failed'); }
+  }};
+}
+
 function createLibrary(React, adapter, components, styles) {
   const {createElement: h, useState, useEffect, useRef} = React;
   const Button = components.Button || 'button';
   const Input = components.Input || 'input';
+  const view = {query: '', url: '', scroll: 0};
   return function Bookmarks({ctx} = {}) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
@@ -14,9 +52,26 @@ function createLibrary(React, adapter, components, styles) {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState('');
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(view.query);
+    const [ask, setAsk] = useState(null);
+    const [preparing, setPreparing] = useState(false);
+    const handoffBusy = useRef(false);
+    const surface = useRef(null);
     const busy = useRef(false), generation = useRef(0), alive = useRef(true);
     const form = useRef(null);
+    useEffect(() => { if (surface.current) surface.current.scrollTop = view.scroll; }, [loading]);
+    async function prepareChat() {
+      if (!ask || handoffBusy.current) return;
+      handoffBusy.current = true; setPreparing(true);
+      view.url = form.current?.elements.url.value || '';
+      const result = await adapter.chat.prepare({target:ask.target,itemIds:[ask.id],prompt:'Help me explore this saved bookmark.',append:true});
+      if (alive.current) {
+        setPreparing(false);
+        if (!result.ok) setError('Native chat could not accept this context (' + result.reason + '). Open the intended conversation and try again.');
+        else { setAsk(null); setNotice('References appended to the native draft. Nothing was sent.'); }
+      }
+      handoffBusy.current = false;
+    }
     async function load(term) {
       const version = ++generation.current;
       setLoading(true);
@@ -43,7 +98,7 @@ function createLibrary(React, adapter, components, styles) {
         const payload = await adapter.request(ctx, '/items', {method: 'POST', body: {url}});
         if (!payload.ok) throw Error(payload.error.message);
         if (alive.current) {
-          if (form.current?.elements.url.value === url) form.current.elements.url.value = '';
+          if (form.current?.elements.url.value === url) {form.current.elements.url.value = ''; view.url = '';}
           setNotice('Saved to your library.'); load(query);
         }
       } catch (e) {
@@ -52,7 +107,7 @@ function createLibrary(React, adapter, components, styles) {
         busy.current = false; if (alive.current) setSaving(false);
       }
     }
-    return h('section', {className: 'hb-library', 'aria-label': 'Bookmarks'},
+    return h('section', {className: 'hb-library', 'aria-label': 'Bookmarks', ref:surface, onScroll:e=>{view.scroll=e.currentTarget.scrollTop;}},
       h('style', null, styles),
       h('header', {className: 'hb-header'},
         h('div', null, h('p', {className: 'hb-eyebrow'}, 'BOOKMARKS / SHARED LIBRARY'), h('h1', null, 'A place for what matters.'),
@@ -61,13 +116,13 @@ function createLibrary(React, adapter, components, styles) {
       h('form', {className: 'hb-capture', ref: form, onSubmit: save, 'data-capture': true},
         h('label', {htmlFor: 'hb-url'}, 'Add to your library'),
         h('div', {className: 'hb-input-row'}, h(Input, {id: 'hb-url', name: 'url', type: 'url', required: true, maxLength: 8192,
-          placeholder: 'Paste a link…', 'aria-label': 'Bookmark URL', disabled: saving}),
+          placeholder: 'Paste a link…', 'aria-label': 'Bookmark URL', disabled: saving, defaultValue:view.url, onInput:e=>{view.url=e.currentTarget.value;}}),
           h(Button, {type: 'submit', disabled: saving}, saving ? 'Saving…' : 'Save link'))),
       error && h('div', {role: 'alert', className: 'hb-error'}, error, h(Button, {type: 'button', onClick: () => load(query)}, 'Retry')),
       notice && h('p', {role: 'status', className: 'hb-notice'}, notice),
       h('div', {className: 'hb-toolbar'}, h('h2', null, query ? 'Search results' : 'All bookmarks'),
-        h('form', {onSubmit: e => {e.preventDefault(); setQuery(e.currentTarget.elements.query.value);}},
-          h(Input, {name: 'query', type: 'search', placeholder: 'Search your library', 'aria-label': 'Search bookmarks'}),
+        h('form', {onSubmit: e => {e.preventDefault(); view.query = e.currentTarget.elements.query.value; setQuery(view.query);}},
+          h(Input, {name: 'query', type: 'search', defaultValue:view.query, placeholder: 'Search your library', 'aria-label': 'Search bookmarks'}),
           h(Button, {type: 'submit'}, 'Search'))),
       h('p', {className: 'hb-count', role: 'status'}, loading ? 'Loading your library…' : `${total} saved ${total === 1 ? 'link' : 'links'}`),
       !loading && !error && items.length === 0 && h('div', {className: 'hb-empty'},
@@ -78,14 +133,19 @@ function createLibrary(React, adapter, components, styles) {
         h('div', {className: 'hb-item-body'},
           h('a', {href: item.url, target: '_blank', rel: 'noopener noreferrer'}, item.title || item.url),
           h('p', null, new URL(item.url).hostname)),
-        h('span', {className: 'hb-item-status'}, item.enrichment_status === 'succeeded' ? 'Summary saved' : 'AI not connected')))),
-      h('footer', {className: 'hb-footer'}, 'Native Ask Hermes, automatic enrichment, and image capture are not yet available in this slice.'));
+        h('span', {className: 'hb-item-status'}, item.enrichment_status === 'succeeded' ? 'Summary saved' : 'AI not connected'),
+        h(Button, {type:'button', disabled:!adapter.chat?.snapshot(), title:'Prepare bookmark references in native Hermes chat', onClick:()=>setAsk({id:item.id,target:adapter.chat.snapshot()})}, 'Ask Hermes')))),
+      ask && h('aside', {className:'hb-capture', 'aria-label':'Native chat context'},
+        h('p', null, 'Append bookmark references to ' + ask.target.owner.profile + ' / ' + ask.target.sessionId + '. Existing draft text is kept. Nothing is sent automatically.'),
+        h(Button, {type:'button', disabled:preparing, onClick:prepareChat}, preparing ? 'Preparing…' : 'Append to native draft'),
+        h(Button, {type:'button', onClick:()=>setAsk(null)}, 'Cancel')),
+      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Automatic enrichment and images are not yet connected.'));
   };
 }
 
 const styles = ".hb-library{--hb-text:var(--ui-text-primary,var(--color-foreground));--hb-muted:var(--ui-text-secondary,var(--color-muted-foreground));--hb-line:var(--ui-stroke-secondary,var(--color-border));--hb-card:var(--ui-background-secondary,var(--color-card));--hb-accent:var(--ui-accent,var(--color-primary));color:var(--hb-text);padding:32px;max-width:1100px;box-sizing:border-box;min-width:0;font-family:inherit}.hb-library *{box-sizing:border-box}.hb-library .hb-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:32px}.hb-library .hb-eyebrow{font-size:11px;letter-spacing:.12em;font-weight:600;color:var(--hb-muted);margin:0 0 12px}.hb-library h1{font-size:clamp(24px,3vw,34px);line-height:1.2;letter-spacing:-.035em;font-weight:600;margin:0}.hb-library .hb-subtitle{color:var(--hb-muted);font-size:14px;margin:12px 0 0}.hb-library .hb-preview{font-size:11px;color:var(--hb-muted);padding:6px 10px;border:1px solid var(--hb-line);border-radius:6px;white-space:nowrap}.hb-library .hb-capture{border:1px solid var(--hb-line);background:var(--hb-card);padding:20px;border-radius:12px;margin-bottom:32px}.hb-library label{display:block;font-size:13px;font-weight:600;margin-bottom:10px}.hb-library .hb-input-row{display:flex;gap:10px}.hb-library input{min-width:0;width:100%;background:transparent;color:var(--hb-text);font:inherit;font-size:14px;border:1px solid var(--hb-line);padding:10px 12px;border-radius:6px}.hb-library button{cursor:pointer;font:inherit;font-size:13px;white-space:nowrap;border:1px solid var(--hb-line);background:transparent;color:var(--hb-text);border-radius:6px;padding:9px 14px}.hb-library .hb-capture button{background:var(--hb-accent);color:var(--ui-on-accent,var(--color-primary-foreground));border-color:transparent}.hb-library button:disabled{opacity:.6;cursor:wait}.hb-library :focus-visible{outline:2px solid var(--hb-accent);outline-offset:3px}.hb-library .hb-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}.hb-library h2{font-size:16px;font-weight:600;margin:0}.hb-library .hb-toolbar form{display:flex;gap:8px;max-width:420px}.hb-library .hb-count{font-size:12px;color:var(--hb-muted);margin:14px 0}.hb-library .hb-items{padding:0;margin:0;list-style:none}.hb-library .hb-items li{display:flex;align-items:center;gap:16px;padding:20px 4px;border-bottom:1px solid var(--hb-line);min-width:0}.hb-library .hb-item-mark{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--hb-line);border-radius:9px;font-size:20px;color:var(--hb-muted);flex-shrink:0}.hb-library .hb-item-body{min-width:0;flex:1}.hb-library a{color:var(--hb-text);font-size:15px;font-weight:500;text-decoration:none;overflow-wrap:anywhere}.hb-library a:hover{text-decoration:underline}.hb-library .hb-item-body p{font-size:12px;color:var(--hb-muted);margin:7px 0 0}.hb-library .hb-item-status{font-size:11px;color:var(--hb-muted)}.hb-library .hb-empty{text-align:center;border:1px dashed var(--hb-line);border-radius:12px;padding:48px 20px}.hb-library .hb-empty h3{font-size:18px;font-weight:500;margin:0}.hb-library .hb-empty p,.hb-library .hb-footer{font-size:12px;color:var(--hb-muted);line-height:1.6}.hb-library .hb-footer{margin-top:28px}.hb-library .hb-error{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-destructive,var(--hb-line));border-radius:8px;font-size:13px;margin:12px 0}.hb-library .hb-notice{font-size:13px;color:var(--hb-muted)}@media(max-width:600px){.hb-library{padding:20px 16px}.hb-library .hb-header{display:block}.hb-library .hb-preview{display:inline-block;margin-top:16px}.hb-library .hb-toolbar{display:block}.hb-library .hb-toolbar form{margin-top:14px;max-width:none}.hb-library .hb-item-status{display:none}.hb-library .hb-capture{padding:16px}.hb-library .hb-input-row{flex-wrap:wrap}.hb-library .hb-input-row button{width:100%}}\n";
 
-const Library = createLibrary(SDK.React, {request: (_ctx, route, init) => SDK.fetchJSON('/api/plugins/hermes-bookmarks' + route,
+const Library = createLibrary(SDK.React, {chat: createNativeChat(null), request: (_ctx, route, init) => SDK.fetchJSON('/api/plugins/hermes-bookmarks' + route,
  init ? {method: init.method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(init.body)} : undefined)}, SDK.components || {}, styles);
 window.__HERMES_PLUGINS__.register('hermes-bookmarks', Library);
 })();
