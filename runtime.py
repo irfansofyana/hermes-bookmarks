@@ -62,7 +62,8 @@ def get_service():
         if bridge is None or len(roots) != 1:
             raise ConfigurationError()
         root = next(iter(roots))
-    return BookmarkService(root)
+    queue_module = importlib.import_module('.bookmarks.jobs', __package__) if __package__ else importlib.import_module('bookmarks.jobs')
+    return BookmarkService(root, enrichment_settings=queue_module.JobQueue(root).route())
 
 
 def dispatch(name, params):

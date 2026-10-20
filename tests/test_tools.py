@@ -48,7 +48,8 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json(), saved)
         found = self.call('bookmark_search', {'query': 'Shared'})
         self.assertEqual(found['result']['total'], 1)
-        self.assertEqual(item['enrichment_status'], 'not_started')
+        self.assertEqual(item['enrichment_status'], 'pending')
+        self.assertTrue(item['enrichment_job_id'])
 
     async def test_http_save_native_get_and_duplicate(self):
         response = await self.client.post('/api/plugins/hermes-bookmarks/items', json={'url': 'https://example.org/b'})

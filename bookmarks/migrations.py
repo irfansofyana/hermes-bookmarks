@@ -32,6 +32,18 @@ MIGRATIONS = (
         END""",
         "INSERT INTO items_fts(items_fts) VALUES ('rebuild')",
     ),
+    (
+        "ALTER TABLE items ADD COLUMN summary TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE items ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'",
+        "ALTER TABLE items ADD COLUMN enrichment_job_id TEXT",
+        "CREATE TABLE library_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        """CREATE TABLE jobs (
+            id TEXT PRIMARY KEY, item_id TEXT NOT NULL, revision INTEGER NOT NULL,
+            settings TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending',
+            worker TEXT, token TEXT, expires REAL, attempts INTEGER NOT NULL DEFAULT 0,
+            error TEXT, result TEXT, UNIQUE(item_id, revision))""",
+        "CREATE INDEX jobs_claim ON jobs(state)",
+    ),
 )
 
 

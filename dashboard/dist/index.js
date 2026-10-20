@@ -117,7 +117,8 @@ function createLibrary(React, adapter, components, styles) {
         h('label', {htmlFor: 'hb-url'}, 'Add to your library'),
         h('div', {className: 'hb-input-row'}, h(Input, {id: 'hb-url', name: 'url', type: 'url', required: true, maxLength: 8192,
           placeholder: 'Paste a link…', 'aria-label': 'Bookmark URL', disabled: saving, defaultValue:view.url, onInput:e=>{view.url=e.currentTarget.value;}}),
-          h(Button, {type: 'submit', disabled: saving}, saving ? 'Saving…' : 'Save link'))),
+          h(Button, {type: 'submit', disabled: saving}, saving ? 'Saving…' : 'Save link')),
+        h('p', {className:'hb-footer'}, 'When enrichment is configured, saving queues page text for your library model. Provider charges may apply.')),
       error && h('div', {role: 'alert', className: 'hb-error'}, error, h(Button, {type: 'button', onClick: () => load(query)}, 'Retry')),
       notice && h('p', {role: 'status', className: 'hb-notice'}, notice),
       h('div', {className: 'hb-toolbar'}, h('h2', null, query ? 'Search results' : 'All bookmarks'),
@@ -133,13 +134,13 @@ function createLibrary(React, adapter, components, styles) {
         h('div', {className: 'hb-item-body'},
           h('a', {href: item.url, target: '_blank', rel: 'noopener noreferrer'}, item.title || item.url),
           h('p', null, new URL(item.url).hostname)),
-        h('span', {className: 'hb-item-status'}, item.enrichment_status === 'succeeded' ? 'Summary saved' : 'AI not connected'),
+        h('span', {className: 'hb-item-status'}, ({succeeded:'Summary saved',pending:'Enrichment queued',running:'Enriching…',failed:'Enrichment failed',cancelled:'Cancelled'})[item.enrichment_status] || 'AI not connected'),
         h(Button, {type:'button', disabled:!adapter.chat?.snapshot(), title:'Prepare bookmark references in native Hermes chat', onClick:()=>setAsk({id:item.id,target:adapter.chat.snapshot()})}, 'Ask Hermes')))),
       ask && h('aside', {className:'hb-capture', 'aria-label':'Native chat context'},
         h('p', null, 'Append bookmark references to ' + ask.target.owner.profile + ' / ' + ask.target.sessionId + '. Existing draft text is kept. Nothing is sent automatically.'),
         h(Button, {type:'button', disabled:preparing, onClick:prepareChat}, preparing ? 'Preparing…' : 'Append to native draft'),
         h(Button, {type:'button', onClick:()=>setAsk(null)}, 'Cancel')),
-      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Automatic enrichment and images are not yet connected.'));
+      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Enrichment requires a configured owner/model and a running host supervisor. Images are not yet connected.'));
   };
 }
 

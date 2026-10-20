@@ -22,13 +22,14 @@ class BookmarkService:
     but enrichment is not yet run/scheduled: new items say ``not_started``.
     """
 
-    def __init__(self, data_root: Path):
+    def __init__(self, data_root: Path, *, enrichment_settings=None):
         self._storage = Storage(data_root)
+        self._enrichment_settings = enrichment_settings
 
     def save_link(self, url: str, title: str = "") -> dict:
         validate_url(url)
         _validate_text(title)
-        return self._storage.save_link(url, title)
+        return self._storage.save_link(url, title, enrichment_settings=self._enrichment_settings)
 
     def get(self, item_id: str) -> dict:
         _validate_text(item_id, nonempty=True)

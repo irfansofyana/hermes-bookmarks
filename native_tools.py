@@ -9,7 +9,7 @@ else:
     from runtime import get_service, dispatch
 
 SPECS = {
-    'bookmark_save': ('Save a URL in the shared bookmark library. AI processing status is returned separately.',
+    'bookmark_save': ('Save a URL in the shared bookmark library and queue configured AI enrichment. Page text may be sent to the library model and incur provider charges. Processing status is returned separately.',
                       {'url': {'type': 'string', 'maxLength': 8192}, 'title': {'type': 'string', 'maxLength': 1000}}, ['url']),
     'bookmark_get': ('Read a saved bookmark by ID. Does not fetch the page or call a model.',
                      {'item_id': {'type': 'string', 'maxLength': 100}}, ['item_id']),
