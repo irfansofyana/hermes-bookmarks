@@ -10,6 +10,8 @@ function createLibrary(React, adapter, components, styles) {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState('');
+    const [asset, setAsset] = useState(null), [uploading, setUploading] = useState(false);
+    const uploadBusy = useRef(false);
     const [query, setQuery] = useState(view.query);
     const [ask, setAsk] = useState(null);
     const [preparing, setPreparing] = useState(false);
@@ -65,6 +67,28 @@ function createLibrary(React, adapter, components, styles) {
         busy.current = false; if (alive.current) setSaving(false);
       }
     }
+    async function uploadImage(event) {
+      const file=event.currentTarget.files?.[0];
+      if (!file || uploadBusy.current) return;
+      if (file.size>10*1024*1024 || !['image/png','image/jpeg','image/webp'].includes(file.type)) {
+        setError('Choose a PNG, JPEG, or WebP image up to 10 MiB.'); return;
+      }
+      uploadBusy.current=true; setUploading(true); setError('');
+      try {
+        const bytes=new Uint8Array(await file.arrayBuffer());
+        let binary='';
+        for (let i=0;i<bytes.length;i+=32768) binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
+        const payload=await adapter.request(ctx,'/assets/base64',{method:'POST',body:{mime_type:file.type,content_base64:btoa(binary)}});
+        if (!payload.ok) throw Error('Upload rejected');
+        if (alive.current) {setAsset(payload.result); setNotice('Image saved as asset ' + payload.result.id + '. No AI analysis was requested.');}
+        try {
+          const preview=await adapter.request(ctx,'/assets/'+payload.result.id+'/preview');
+          if (!preview.ok) throw Error('Preview unavailable');
+          if (alive.current) setAsset({...payload.result,preview:preview.result});
+        } catch (_) {if (alive.current) setNotice('Image is saved as asset '+payload.result.id+'. Preview is unavailable.');}
+      } catch (_) {if (alive.current) setError('Image upload failed. Check the image and library configuration.');}
+      finally {uploadBusy.current=false; if (alive.current) setUploading(false);}
+    }
     return h('section', {className: 'hb-library', 'aria-label': 'Bookmarks', ref:surface, onScroll:e=>{view.scroll=e.currentTarget.scrollTop;}},
       h('style', null, styles),
       h('header', {className: 'hb-header'},
@@ -77,6 +101,12 @@ function createLibrary(React, adapter, components, styles) {
           placeholder: 'Paste a link…', 'aria-label': 'Bookmark URL', disabled: saving, defaultValue:view.url, onInput:e=>{view.url=e.currentTarget.value;}}),
           h(Button, {type: 'submit', disabled: saving}, saving ? 'Saving…' : 'Save link')),
         h('p', {className:'hb-footer'}, 'When enrichment is configured, saving queues page text for your library model. Provider charges may apply.')),
+      h('div', {className:'hb-capture'},
+        h('label', {htmlFor:'hb-image'}, uploading ? 'Uploading image…' : 'Add an image attachment'),
+        h('input', {id:'hb-image',type:'file',accept:'image/png,image/jpeg,image/webp',disabled:uploading,onChange:uploadImage}),
+        asset && h('div', null,
+          asset.preview && h('img', {alt:'Uploaded image preview',src:'data:'+asset.preview.mime_type+';base64,'+asset.preview.content_base64,style:{maxWidth:'100%',maxHeight:160}}),
+          h('p', {className:'hb-footer'}, 'Asset '+asset.id+' · '+asset.width+' × '+asset.height+' · image items and note embedding arrive in M3.'))),
       error && h('div', {role: 'alert', className: 'hb-error'}, error, h(Button, {type: 'button', onClick: () => load(query)}, 'Retry')),
       notice && h('p', {role: 'status', className: 'hb-notice'}, notice),
       h('div', {className: 'hb-toolbar'}, h('h2', null, query ? 'Search results' : 'All bookmarks'),
@@ -98,6 +128,6 @@ function createLibrary(React, adapter, components, styles) {
         h('p', null, 'Append bookmark references to ' + ask.target.owner.profile + ' / ' + ask.target.sessionId + '. Existing draft text is kept. Nothing is sent automatically.'),
         h(Button, {type:'button', disabled:preparing, onClick:prepareChat}, preparing ? 'Preparing…' : 'Append to native draft'),
         h(Button, {type:'button', onClick:()=>setAsk(null)}, 'Cancel')),
-      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Enrichment requires a configured owner/model and a running host supervisor. Images are not yet connected.'));
+      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Enrichment requires a configured owner/model and a running host supervisor. Image attachments do not yet appear as standalone library items.'));
   };
 }

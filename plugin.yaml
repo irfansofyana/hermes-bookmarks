@@ -1,7 +1,12 @@
 name: hermes-bookmarks
 version: "0.1.0"
 description: Shared bookmark capture and search for Hermes Desktop, Dashboard and native tools; development preview
+python_dependencies:
+  - "Pillow==12.3.0"
+  - "python-multipart==0.0.32"
 provides_tools:
+  - bookmark_attachment_add
+  - bookmark_attachment_get
   - bookmark_save
   - bookmark_get
   - bookmark_search

@@ -44,6 +44,12 @@ MIGRATIONS = (
             error TEXT, result TEXT, UNIQUE(item_id, revision))""",
         "CREATE INDEX jobs_claim ON jobs(state)",
     ),
+    (
+        """CREATE TABLE assets (
+            id TEXT PRIMARY KEY, mime_type TEXT NOT NULL,
+            size INTEGER NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL)
+        """,
+    ),
 )
 
 

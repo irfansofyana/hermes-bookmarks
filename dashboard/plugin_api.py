@@ -59,3 +59,67 @@ async def save_item(request: Request):
     except (ValueError, UnicodeDecodeError):
         body = None
     return await run_in_threadpool(invoke, 'bookmark_save', body)
+
+
+def asset_call(operation, *args):
+    bridge = sys.modules.get(BRIDGE_NAME)
+    if bridge is None:
+        return {'ok': False, 'error': {'code': 'configuration_error', 'message': 'Native plugin registration is unavailable.'}}
+    return bridge.asset_operation(operation, *args)
+
+
+def asset_response(payload):
+    code = payload.get('error', {}).get('code')
+    return JSONResponse(payload, status_code=200 if payload['ok'] else {'not_found':404,'configuration_error':503,'storage_error':503}.get(code,400))
+
+
+@router.post('/assets/base64')
+async def upload_asset_json(request: Request):
+    import json
+    data=bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data)>14*1024*1024+65536:
+            return JSONResponse({'ok':False,'error':{'code':'invalid_argument','message':'Upload exceeds limit.'}},status_code=413)
+    try: body=json.loads(data)
+    except (ValueError,UnicodeDecodeError): body=None
+    return await run_in_threadpool(invoke,'bookmark_attachment_add',body)
+
+
+@router.post('/assets')
+async def upload_asset(request: Request):
+    data=bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data)>10*1024*1024+65536:
+            return JSONResponse({'ok':False,'error':{'code':'invalid_argument','message':'Upload exceeds limit.'}},status_code=413)
+    mime=request.headers.get('content-type','').split(';')[0].strip().lower()
+    content=bytes(data)
+    if mime=='multipart/form-data':
+        async def receive(): return {'type':'http.request','body':bytes(data),'more_body':False}
+        replay=Request(request.scope,receive)
+        try:
+            async with replay.form(max_files=1,max_fields=0) as form:
+                if len(form)!=1: raise ValueError('One file required')
+                upload=form.get('file')
+                if upload is None or not hasattr(upload,'read'): raise ValueError('File required')
+                content=await upload.read(10*1024*1024+1)
+                mime=upload.content_type
+        except (ValueError,TypeError):
+            return asset_response({'ok':False,'error':{'code':'invalid_argument','message':'Invalid image upload.'}})
+    payload=await run_in_threadpool(asset_call,'store_image',content,mime)
+    return asset_response(payload)
+
+
+@router.get('/assets/{asset_id}/preview')
+def preview_asset(asset_id: str):
+    return asset_response(asset_call('preview',asset_id))
+
+
+@router.get('/assets/{asset_id}')
+def read_asset(asset_id: str):
+    from fastapi.responses import Response
+    payload=asset_call('read_asset',asset_id)
+    if not payload['ok']: return asset_response(payload)
+    content,mime=payload['result']
+    return Response(content,media_type=mime,headers={'X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'})

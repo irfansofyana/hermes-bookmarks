@@ -68,6 +68,35 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         for params in ({'query': '', 'limit': True}, {'query': '', 'offset': -1}, {'query': '', 'limit': 101}):
             self.assertFalse(self.call('bookmark_search', params)['ok'])
 
+    async def test_image_upload_preview_and_native_metadata(self):
+        from io import BytesIO
+        from PIL import Image
+        image=BytesIO(); Image.new('RGB',(2,2),'blue').save(image,format='PNG')
+        response=await self.client.post('/api/plugins/hermes-bookmarks/assets',content=image.getvalue(),headers={'Content-Type':'image/png'})
+        self.assertEqual(response.status_code,200)
+        item=response.json()['result']
+        got=self.call('bookmark_attachment_get',{'asset_id':item['id']})
+        self.assertTrue(got['ok']); self.assertEqual(got['result']['width'],2)
+        preview=await self.client.get('/api/plugins/hermes-bookmarks/assets/'+item['id']+'/preview')
+        self.assertTrue(preview.json()['result']['content_base64'])
+        original=await self.client.get('/api/plugins/hermes-bookmarks/assets/'+item['id'])
+        self.assertEqual(original.headers['content-type'],'image/png')
+        multipart=await self.client.post('/api/plugins/hermes-bookmarks/assets',files={'file':('fixture.png',image.getvalue(),'image/png')})
+        self.assertEqual(multipart.status_code,200)
+        import base64
+        encoded=await self.client.post('/api/plugins/hermes-bookmarks/assets/base64',json={'content_base64':base64.b64encode(image.getvalue()).decode('ascii'),'mime_type':'image/png'})
+        self.assertEqual(encoded.status_code,200)
+        invalid=await self.client.post('/api/plugins/hermes-bookmarks/assets',content=b'<svg/>',headers={'Content-Type':'image/svg+xml'})
+        self.assertEqual(invalid.status_code,400)
+
+    async def test_owned_assets_surface_safe_storage_failures(self):
+        from unittest.mock import patch
+        from bookmarks.errors import StorageError
+        with patch('bookmarks.assets.AssetStore', side_effect=StorageError()):
+            response=await self.client.get('/api/plugins/hermes-bookmarks/assets/'+'a'*32+'/preview')
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json()['error']['code'],'storage_error')
+
     async def test_query_validation_and_not_found(self):
         response = await self.client.get('/api/plugins/hermes-bookmarks/items?limit=true')
         self.assertEqual(response.status_code, 400)
@@ -76,7 +105,7 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json()['error']['code'], 'not_found')
 
     def test_schema_and_runtime_registration_are_bounded(self):
-        self.assertEqual(set(self.tools), {'bookmark_save', 'bookmark_get', 'bookmark_search'})
+        self.assertEqual(set(self.tools), {'bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_get', 'bookmark_search'})
         for tool in self.tools.values():
             self.assertIs(tool['schema']['parameters']['additionalProperties'], False)
         self.assertEqual(self.tools['bookmark_search']['schema']['parameters']['properties']['limit']['maximum'], 100)

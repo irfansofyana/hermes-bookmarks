@@ -27,6 +27,8 @@ for (const target of ['desktop', 'dashboard']) {
     let items = [{id: 'fixture', title: 'Existing bookmark', url: 'https://example.org', enrichment_status: 'not_started'}];
     let writes = 0, finish, failSave = true;
     async function request(route, init) {
+      if (route.includes('/assets/base64')) return {ok:true,result:{id:'abc123',width:2,height:2,mime_type:'image/png'}};
+      if (route.includes('/assets/abc123/preview')) return {ok:true,result:{mime_type:'image/png',content_base64:fs.readFileSync('tests/fixtures/tiny.png').toString('base64')}};
       if (init && init.method === 'POST') {
         writes++;
         if (failSave) {
@@ -45,7 +47,7 @@ for (const target of ['desktop', 'dashboard']) {
     const host = { state: {}, navigate() {} };
     let source = fs.readFileSync(target === 'desktop' ? 'desktop/plugin.js' : 'dashboard/dist/index.js', 'utf8');
     const scope = { React, host, ctx, ROUTES_AREA: 'routes', SIDEBAR_NAV_AREA: 'nav', Button: 'button', Input: 'input', console,
-      setTimeout, clearTimeout, URL, window: {__HERMES_PLUGIN_SDK__: sdk, __HERMES_PLUGINS__: {register: (_id, page) => { renderPage = () => React.createElement(page); }}} };
+      setTimeout, clearTimeout, URL, btoa, Uint8Array, window: {__HERMES_PLUGIN_SDK__: sdk, __HERMES_PLUGINS__: {register: (_id, page) => { renderPage = () => React.createElement(page); }}} };
     if (target === 'desktop') {
       // Test-only host module linking; the emitted module itself is syntax-checked separately.
       source = source.replace(/^import .*;\n/gm, '').replace('export default', 'const plugin =');
@@ -82,6 +84,14 @@ for (const target of ['desktop', 'dashboard']) {
       await React.act(async () => {search.form.dispatchEvent(new dom.window.Event('submit', {bubbles:true,cancelable:true}));});
       assert.match(document.body.textContent, /No matches yet/);
       assert.doesNotMatch(document.body.textContent, /Existing bookmark/);
+      const upload = document.querySelector('input[type="file"]');
+      assert.ok(upload, 'Image capture must be available');
+      const bytes=fs.readFileSync('tests/fixtures/tiny.png');
+      const file={name:'tiny.png',type:'image/png',size:bytes.length,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};
+      Object.defineProperty(upload,'files',{value:[file]});
+      await React.act(async()=>upload.dispatchEvent(new dom.window.Event('change',{bubbles:true})));
+      assert.match(document.querySelector('img[alt="Uploaded image preview"]').src,/^data:image\/png;base64,/);
+      assert.match(document.body.textContent,/abc123/);
     } finally {
       await React.act(async () => root.unmount());
       dom.window.close();

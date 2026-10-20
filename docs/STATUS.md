@@ -4,9 +4,9 @@
 
 The owner approved M1 execution using subagents on 2026-10-20, then approved switching to hybrid execution after Task 2 review. From Task 3, the controller implements directly with TDD, targeted independent reviews for concurrency/security boundaries, and a final whole-branch review. Do not restart completed tasks or ask for execution-method approval again. Active branch: `feat/m1-native-foundation`; isolated worktree: `m1`, based on `e7e0cc91cf71724c9d3caf7978308be462c78a77`.
 
-**Tasks 1 and 2 are independently approved; Task 3 is implemented and locally verified in hybrid mode.** The package registers native save/get/search, shared HTTP routes and both emitted library interfaces. Enrichment, image transport and native context handoff are not yet complete. See `docs/verification/capture.md` for current 40-Python/4-Node test evidence and successful isolated official validation. No live-host acceptance, paid inference, deployment or remote CI is claimed. M1 remains incomplete.
+**Tasks 1–2 are independently approved; Task 3 is locally complete. Tasks 4–5 have committed implementations and passing isolated tests; Task 6 has a locally tested image-attachment slice.** Native handoff is Desktop-only; Dashboard context transfer remains unsupported. Enrichment uses durable fenced jobs and an explicit owner/model route. The image slice supports bounded upload, persisted IDs, native attachment tools, and both emitted UI previews. Latest suite: 65 Python tests and 10 Node tests passed, plus deterministic build/syntax/diff checks and isolated official plugin validation (`ok: true`, no warnings). Independent enrichment security/concurrency review was dispatched. Actual-host acceptance and final whole-branch review remain outstanding; M1 is incomplete. No live deployment, real-model call, push or remote CI is claimed.
 
-Task 1 commit: `a51a493e07aa76b72a1cbc3dd03505ee7a793927`, subject `chore: establish documented Hermes plugin boundaries`. Its review approved package/contract scope, not host/milestone acceptance. The composer-getter evidence wording and temporary test-package child-module cleanup remain recorded minors for an appropriate later task; neither was changed in Task 2.
+Task 1 commit: `a51a493e07aa76b72a1cbc3dd03505ee7a793927`, subject `chore: establish documented Hermes plugin boundaries`. Its review approved package/contract scope, not host/milestone acceptance. The composer-getter evidence wording and temporary test-package child-module cleanup were corrected in Task 3.
 
 Task 2 is the commit containing this entry, subject `feat: add durable shared bookmark service`; resolve its exact SHA with `rtk git log -1 --format=%H -- bookmarks/service.py` rather than a self-referential hash field. No push/merge/release was performed.
 
@@ -16,7 +16,7 @@ Task 2 is the commit containing this entry, subject `feat: add durable shared bo
 2. `docs/verification/compatibility.md` — pinned host contracts, evidence levels, blockers
 3. `docs/verification/service.md` — implemented service/storage contract and local Task 2 evidence
 4. `.superpowers/sdd/2026-10-20-m1-native-foundation/task-2-report.md` — local, intentionally gitignored coordination report with detailed RED/GREEN and self-review
-5. The next controller-supplied task brief after independent Task 2 review; active milestone plan: `docs/superpowers/plans/2026-10-20-m1-native-foundation.md`
+5. The current Task 6 brief and enrichment-review report when available; active milestone plan: `docs/superpowers/plans/2026-10-20-m1-native-foundation.md`
 6. Product spec and `docs/ROADMAP.md`
 
 ## Verified Task 1 evidence
@@ -46,9 +46,9 @@ Committed evidence: `docs/verification/service.md`. Detailed command/stdout/stde
 ## Acceptance concerns and skipped checks
 
 - **Dashboard contextual handoff blocker:** native `/chat?resume=<id>&profile=<name>` navigation is documented, but a supported session-bound editable-draft/context API was not found in the inspected SDK. Basic resume navigation alone is not Ask Hermes acceptance. Keep contextual action unavailable rather than intercepting DOM or writing terminal input.
-- **Desktop handoff unverified:** public source has session-addressed composer/navigation/identity APIs; actual mounted target, installed-build exports, race-safe draft preservation and library-state retention still need Task 4 proof. No embedded public chat component or atomic conditional draft replace is claimed.
+- **Desktop handoff unverified:** public source has session-addressed composer/navigation/identity APIs; exact target, draft-preservation and focus-race behavior have public-shaped tests in Task 4; actual mounted target, installed-build exports and state retention still require real-host proof. No embedded public chat component or atomic conditional draft replace is claimed.
 - Built-in `plugin_data_dir` follows the active profile. Task 3 binds an explicitly configured absolute `settings.library_root` via the plugin-owned registration bridge, with no silent profile fallback. This is not proof of shared-root selection or cross-backend sync.
-- Python lifecycle methods are source-visible candidates, not proof of a documented persistent service owner/running loop/cold-start worker. Stable library-selected inference route and lifecycle remain Task 5 gates. Task 2 schedules no work.
+- Python lifecycle methods are source-visible candidates, not proof of a documented persistent service owner/running loop/cold-start worker. Task 5 implements the explicit persisted route and supervised worker adapter; real cold-host ownership/running-loop behavior remains a gate. Current adapter saves queue enrichment, while the original pure Task 2 service did not.
 - Real host auth/approvals and remote asset transport are not tested. Direct router tests have no host authentication middleware and do not prove unauthorized rejection. No paid inference, actual native chat turn, rendered browser/theme check, real-vault access or live deployment performed.
 - SQLite FTS5 is required; local locking/persistence were tested, not power-loss fault injection or network-filesystem correctness. Prolonged contention can return a safe storage error after the bounded five-second SQLite wait. URL syntax validation is not network-fetch/SSRF authorization.
 
@@ -58,7 +58,7 @@ Continue independent safe tasks under the preflight ruling; these limits block t
 
 | Milestone | State | Next deliverable |
 | --- | --- | --- |
-| M1 native foundation | Hybrid execution; Tasks 1–3 locally complete; Tasks 4–6 pending | Native chat handoff |
+| M1 native foundation | Hybrid; Tasks 1–3 locally complete, 4–6 implementations pending host acceptance/review | Real-host worker/chat/auth/assets proof and final review |
 | M2 organization/import | Roadmapped; not implemented | Detail against established M1 contracts |
 | M3 notes/images/enrichment | Roadmapped; not implemented | Detail against working jobs/assets |
 | M4 polished UI/native workflow | Roadmapped; not implemented | Emitted UI and real-host visual evidence |
@@ -66,7 +66,7 @@ Continue independent safe tasks under the preflight ruling; these limits block t
 
 ## Next runnable action
 
-Continue directly with Task 4 native handoff using the approved hybrid execution method. Task 2 review approved both axes without blockers. Task 3 now resolves an explicitly configured shared root through a plugin-owned lifecycle bridge; cold-host/multi-profile transport evidence is still needed. Do not infer full readiness from the preview health endpoint.
+Continue Task 6 in the existing worktree; do not restart Tasks 1–3 or delegate ordinary implementation again. Consume the targeted enrichment review when delivered, finish actual-host smoke/unauthorized-asset evidence and emitted-UI browser/theme verification, then obtain one whole-branch review. Current tests prove direct API/storage and SDK-shaped UI behavior, not installed-host authentication, cold startup, remote delivery or real provider routing. Preserve the explicit limitations if a public host capability is unavailable. No active installation or paid inference is approved.
 
 ## Repository provenance
 

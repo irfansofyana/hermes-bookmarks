@@ -10,10 +10,10 @@ import importlib
 import sys
 
 if __package__:
-    from .bookmarks.errors import ConfigurationError
+    from .bookmarks.errors import BookmarkError, ConfigurationError
     from .bookmarks.service import BookmarkService
 else:
-    from bookmarks.errors import ConfigurationError
+    from bookmarks.errors import BookmarkError, ConfigurationError
     from bookmarks.service import BookmarkService
 
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
@@ -72,3 +72,21 @@ def dispatch(name, params):
         return bridge.dispatch(name, params)
     module = importlib.import_module('.native_tools', __package__) if __package__ else importlib.import_module('native_tools')
     return module.execute(name, params, get_service)
+
+
+def asset_operation(operation, *args):
+    bridge = sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]:
+        return bridge.asset_operation(operation, *args)
+    try:
+        module = importlib.import_module('.bookmarks.assets', __package__) if __package__ else importlib.import_module('bookmarks.assets')
+        store = module.AssetStore(get_service()._storage.database_path.parent)
+        if operation not in {'store_image','get_asset','read_asset','preview'}:
+            raise ValueError('Unsupported operation')
+        return {'ok': True, 'result': getattr(store, operation)(*args)}
+    except LookupError:
+        return {'ok': False, 'error': {'code': 'not_found', 'message': 'Asset not found.'}}
+    except BookmarkError as exc:
+        return {'ok': False, 'error': {'code': exc.code, 'message': exc.message}}
+    except (ValueError, OSError):
+        return {'ok': False, 'error': {'code': 'invalid_argument', 'message': 'Image data or owned asset reference is invalid.'}}
