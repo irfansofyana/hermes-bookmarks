@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Status: proposed execution breakdown, based on the approved product direction. Detailed M1 plan awaits review. No product code has shipped.
+Status: M1 execution approved using subagents on 2026-10-20. Task 1's minimal foundation package is implemented with documented host acceptance concerns; Tasks 2–6 remain pending. No live deployment or product release has shipped. See `STATUS.md` and `verification/compatibility.md`.
 
 ## Delivery approach
 

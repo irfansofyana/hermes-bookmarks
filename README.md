@@ -2,7 +2,7 @@
 
 A planned standalone bookmark and image library for Hermes Desktop, Dashboard, and native chat tools.
 
-**Status: implementation planning.** Product direction is agreed; the first milestone plan awaits review. This is not yet an installable plugin, and host compatibility has not been exercised.
+**Status: M1 execution approved; Task 1 foundation preview implemented with concerns.** The minimal package passes isolated Hermes validation, but capture, Desktop UI, enrichment and contextual native-chat integration are not implemented or accepted. See [host evidence and limits](docs/verification/compatibility.md) and [development status](docs/STATUS.md). This is not a v1 release or an approved live deployment.
 
 ## Product direction
 
@@ -29,9 +29,9 @@ The official documentation is the integration contract. Blogwatcher is a referen
 
 ## Delivery gates
 
-1. Review the first milestone plan and choose its execution method.
+1. M1 execution is approved using subagents; Task 1 is locally implemented with documented acceptance limits.
 2. Build a thin working slice, verifying public Hermes APIs during development.
 3. Implement remaining milestones test-first, updating evidence and handoff after each task.
 4. Verify Desktop, Dashboard, native chat tools, and release portability separately.
 
-No install command is provided until a working package exists. No service deployment, catalog submission, or release is implied by this repository.
+No live install command is provided for this incomplete foundation preview. No service deployment, catalog submission, or release is implied by this repository.

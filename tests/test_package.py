@@ -1,0 +1,67 @@
+"""Package/HTTP tests; the direct router harness does NOT prove host auth."""
+import importlib.util
+import json
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+import unittest
+
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class PackageTests(unittest.IsolatedAsyncioTestCase):
+    def test_manifests_match_the_preview_package(self):
+        import yaml
+        native = yaml.safe_load((ROOT / 'plugin.yaml').read_text())
+        dashboard = json.loads((ROOT / 'dashboard/manifest.json').read_text())
+        self.assertEqual(native['name'], dashboard['name'])
+        self.assertEqual(native['version'], dashboard['version'])
+        self.assertEqual(native['provides_tools'], [])
+        self.assertEqual(native['provides_hooks'], [])
+        self.assertNotIn('requires_hermes', native)
+        self.assertTrue((ROOT / 'dashboard' / dashboard['entry']).is_file())
+        self.assertTrue((ROOT / 'dashboard' / dashboard['api']).is_file())
+
+    def test_native_registration_delegates_to_read_only_status_command(self):
+        spec = importlib.util.spec_from_file_location(
+            'bookmarks_foundation_test', ROOT / '__init__.py',
+            submodule_search_locations=[str(ROOT)],
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        self.addCleanup(lambda: sys.modules.pop(spec.name, None))
+        spec.loader.exec_module(module)
+        commands = []
+        context = SimpleNamespace(register_command=lambda **kwargs: commands.append(kwargs))
+        module.register(context)
+        self.assertEqual([c['name'] for c in commands], ['bookmarks-status'])
+        payload = json.loads(commands[0]['handler']('', unused_host_keyword=True))
+        self.assertEqual(payload['stage'], 'foundation_preview')
+        self.assertEqual(payload['plugin'], 'hermes-bookmarks')
+        self.assertIs(payload['library_ready'], False)
+
+    async def test_path_loaded_health_is_read_only_foundation_preview(self):
+        spec = importlib.util.spec_from_file_location(
+            'isolated_dashboard_api_test', ROOT / 'dashboard/plugin_api.py',
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        app = FastAPI()
+        app.include_router(module.router, prefix='/api/plugins/hermes-bookmarks')
+        async with AsyncClient(transport=ASGITransport(app=app), base_url='http://synthetic.invalid') as client:
+            response = await client.get('/api/plugins/hermes-bookmarks/health')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {
+                'ok': True, 'plugin': 'hermes-bookmarks',
+                'stage': 'foundation_preview', 'library_ready': False,
+            })
+            for method in ('post', 'put', 'patch', 'delete'):
+                with self.subTest(method=method):
+                    result = await getattr(client, method)('/api/plugins/hermes-bookmarks/health')
+                    self.assertEqual(result.status_code, 405)
+        self.assertEqual([(r.path, r.methods) for r in module.router.routes], [('/health', {'GET'})])

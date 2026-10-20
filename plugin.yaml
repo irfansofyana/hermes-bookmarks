@@ -1,0 +1,5 @@
+name: hermes-bookmarks
+version: "0.1.0"
+description: Read-only Hermes Bookmarks foundation preview; capture and native chat are not yet implemented
+provides_tools: []
+provides_hooks: []
