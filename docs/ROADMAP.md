@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Status: M1 execution approved using subagents on 2026-10-20. Task 1's minimal foundation package is implemented with documented host acceptance concerns; Tasks 2–6 remain pending. No live deployment or product release has shipped. See `STATUS.md` and `verification/compatibility.md`.
+Status: M1 foundation and its code-review fix pass are implemented locally; target acceptance remains partial. On 2026-10-21 the owner corrected the chat direction to a plugin-owned UI, with Hermes execution underneath rather than navigation to the usual session chat. The integration design is being revised before new chat implementation. M2–M5 remain unimplemented. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
 
 ## Delivery approach
 
@@ -46,7 +46,7 @@ Depends on functioning prior slices; refine shared UI continuously rather than w
 
 Deliver image-led grid/list views, comfortable detail reading, full nested navigation, visible selection/bulk actions, native Ask Hermes context actions, state-preserving native-chat navigation, responsive narrow-screen flows, host theme inheritance, keyboard/touch accessibility, reduced motion, and complete error/empty/pending states.
 
-Use the host's exported primitives and native chat. No duplicate transcript, composer, model picker, or credential form. Include side-by-side composition only where public SDK support was proven; otherwise provide the approved explicit handoff. Record differences between Desktop and Dashboard. Chat uses session-scoped identity/model; enrichment uses its library route.
+Provide the plugin-owned chat UI alongside library work, using public presentation primitives where suitable and Hermes-backed execution. Do not replace it with a regular-session handoff. No copied host internals, new agent loop or separate credential form. Verify the backend/session/streaming contract before committing to an adapter. Record differences between Desktop and Dashboard. Chat uses session-scoped identity/model; enrichment uses its library route.
 
 Detailed plan includes actual emitted-bundle browser tests in both themes and widths, long titles, missing covers, large collections, unsaved notes during navigation, stale responses, focused session changes, existing composer drafts, and double clicks. Capture screenshots and inspect console/layout errors. Expected native chat capabilities are verified on the host, not recreated.
 

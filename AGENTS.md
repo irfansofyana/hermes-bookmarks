@@ -12,12 +12,12 @@ Do not infer completed implementation from a plan checkbox, an example response,
 ## Non-negotiable integration rules
 
 - Use public, documented Hermes SDKs and exported components. Official docs are authoritative; inspect the exact target version during development.
-- No Hermes core edits, private imports, monkey patches, DOM/React interception, copied internal chat components, custom chat renderer/composer/agent loop/model picker, or separate credential store.
-- Reuse native chat. If composition is unsupported, use a supported explicit handoff. Missing supported APIs are limitations to report, not permission to bypass constraints.
+- No Hermes core edits, private imports, monkey patches, host DOM/React interception, copied internal chat components, new agent loop or separate credential store.
+- Owner clarification: Bookmarks must have its own chat UI while the plugin is open, not redirect primarily to the usual Hermes session screen. Plugin-owned conversation presentation is allowed; reuse public Hermes agent/session/provider facilities underneath and public UI components where they fit. Do not substitute draft handoff for the requested in-plugin experience. Verify the supported backend contract before implementing it; do not assume either an exported full-chat component or a custom agent runtime is required.
 - Shared library per installation; explicit data root. Never silently fall back to per-profile storage or assume profile names are unique across backends.
 - Chat belongs to an explicit profile/session. Library enrichment settings and native chat model selection are independent.
 - Follow each client's active Hermes theme with scoped CSS and public components.
-- Inspect `irfansofyana/hermes-blogwatcher` as a working reference, not an unchanged backend template.
+- Inspect `irfansofyana/hermes-blogwatcher` for packaging/host-adapter patterns and `irfansofyana/hermes-learning` for the requested in-plugin chat UI/session/transport pattern. Pin and inspect relevant source; adapt domain semantics without depending on either plugin at runtime.
 
 ## Workflow
 

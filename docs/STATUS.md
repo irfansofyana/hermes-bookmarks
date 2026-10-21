@@ -2,6 +2,12 @@
 
 ## Current state
 
+**Owner UI correction (2026-10-21):** the open Bookmarks plugin needs its own chat interface alongside the library. It must not primarily send the user to the usual Hermes session chat. Reusing Hermes execution underneath is compatible with a plugin-owned UI. The previous native-screen/draft-handoff interpretation was wrong; existing handoff code/evidence is historical, not fulfillment of this requirement. Backend session ownership, streaming and public API support need a corrected integration design before new chat code. No new UI implementation is claimed.
+
+**Verified chat reference:** owner-requested `irfansofyana/hermes-learning`, commit `2a9f2e2fd9c5007996dc7a6b7f16f50a306a6c10`. Its plugin-owned TutorPanel uses real Hermes sessions through Desktop public gateway methods/events and Dashboard SDK-authenticated WebSocket JSON-RPC. Inspected source matches installed Learning; 58 focused controller/transport tests passed. See `docs/verification/in-plugin-chat-reference.md`. This removes the mistaken native-composer/handoff blocker, not Bookmarks' own implementation/runtime acceptance work.
+
+**Current shipping permission:** publish a PR only; owner retains merge/release. Synthetic real text/vision provider tests are approved, including disclosed host retries/possible charges. No live installation or production restart is authorized. The earlier unanswered question about accepting Dashboard handoff limitations is superseded by the in-plugin UI correction.
+
 M1 is a working development foundation with real backend and Dashboard evidence, **not full target acceptance or a v1 release**. Work remains on `feat/m1-native-foundation` in the existing `m1` linked worktree, based on `e7e0cc91cf71724c9d3caf7978308be462c78a77`. Resolve current HEAD with `rtk git log -1`; do not recreate the worktree or restart completed tasks.
 
 The owner approved subagent-driven execution, then explicitly switched to **hybrid after Task 2**. Ordinary implementation is direct with TDD, targeted boundary reviews and one whole-branch review. Tasks 1–2 were independently approved; do not redo their implementer/reviewer cycles.
@@ -34,26 +40,26 @@ Latest verification: **82 Python tests passed on CPython 3.14.7 and CPython 3.11
 - Only SQLite busy/locked failures receive three bounded per-operation attempts; public storage error messages stay sanitized. Lifecycle-owned public task observers record termination. A failed worker can restart only from its original owner’s next async entry after a 30-second monotonic cooldown, not on a background timer. A real host recovered a 7.027-second write lock with the default five-second timeout and no extra API activation.
 - Complete/fail sample lease time after the SQLite write lock. Fresh claim tokens and revisions reject stale applies. Admitted executor work drains before worker termination is acknowledged, including repeated cancellation; cancellation does not instantly stop a thread.
 - Images have owned IDs, bounded decoding and authenticated delivery; no static-files auth bypass or arbitrary path refs. UI JSON transport is public; do not assume binary IPC works in every authentication mode.
-- Shared UI sources emit separate Desktop/Dashboard loaders. Do not hand-edit generated bundles or build custom chat.
+- Shared UI sources emit separate Desktop/Dashboard loaders. Do not hand-edit generated bundles. Plugin-owned chat presentation is required; a separate agent runtime, credential store, copied internals or host UI interception is not allowed.
 
 ## Open acceptance gates
 
-1. Connected actual Desktop bookmark/composer proof. A disposable packaged app launched with verified separate userData but stayed behind its backend connection overlay. No core workaround or active-app deployment was attempted.
-2. Supported Dashboard context/draft handoff, or an explicit owner revision of that target's acceptance. Resume navigation is not equivalent; keep the action unavailable.
-3. Approved real-model text/vision, trust and routing. The real worker probe used incomplete job settings and a non-callable synthetic route; it is not inference evidence.
+1. Connected actual Desktop plugin proof. The disposable app stayed behind its backend connection overlay. No core workaround or active-app deployment was attempted.
+2. In-plugin chat UI and verified public Hermes-backed execution on both clients. The old native-composer handoff gate is no longer the intended UX; do not waive in-plugin chat just because a handoff works.
+3. Actual real-model text/vision, trust and routing checks on synthetic content are now approved but unperformed. Earlier incomplete-job probes remain lifecycle evidence, not inference evidence.
 4. Independent-machine/OAuth transport and maximum payload checks through every host proxy. Current real authenticated TCP checks are loopback.
 Code review/fix gates are consumed, not pending. Deferred UI minors: global Retry only reloads rather than resubmitting; narrow layouts hide item status. Both are recorded in `final-review-fixes.md` for the next UI pass, not waived for v1.
 
 ## Next runnable action
 
-The final whole-branch review and its one fix pass are finished; do not start another speculative review cycle. Resume only the open target-acceptance work: connected isolated Desktop using supported configuration, owner decision on Dashboard handoff, and approved model/remote transport checks. Ask before active deployment or inference. Preserve the partial-M1 label and record the acceptance outcome before expanding into M2–M5.
+Use the verified Learning reference to correct the chat design: plugin-owned panel/controller with real Hermes sessions, Desktop host request/events and Dashboard SDK-authenticated gateway transport. Adapt bounded bookmark context and shared-library versus conversation ownership; do not copy teaching/assessment logic or depend on Learning being installed. Verify the actual Bookmarks adapters separately. Present the revised design before product implementation; preserve the approved hybrid execution method. The M1 review/fix pass is historical and finished; do not repeat it. Continue the approved synthetic model/target checks within scope. Prepare a PR once implementation/verification is ready; do not merge, release or install live.
 
 Use current files/git and the ledger, not checked-box totals or old conversation summaries. Preserve uncommitted work. Keep local review artifacts while target acceptance is unfinished.
 
 ## Scope and permissions
 
-Approved: isolated M1 development, hybrid execution, synthetic fixtures, local commits and documentation. Disposable test-home configuration/installs were exercised within that isolated test scope. **Not approved:** active plugin install/enable, production restart, paid/live inference, real-vault migration, push/merge, catalog submission or release. Publishing a development branch needs separate approval; no remote CI result exists without a real exact-head run.
+Approved: continued development toward v1 using hybrid execution, synthetic fixtures, local commits/documentation, development-branch push and PR publication, and real text/vision verification using synthetic inputs through Hermes. Host retries/fallback and possible provider charges were disclosed. Disposable test-home installs remain within isolated test scope. **Not approved:** merge/release, active plugin install/enable, production restart, real-vault migration or catalog submission. No remote CI result exists without a real exact-head run.
 
-Shared library, native chat, automatic individual-capture tags/summaries, nested collections, rich notes/images, import and export remain v1 requirements. M2–M5 are roadmapped, not implemented. Follow each host's theme. No core patches, private imports, custom agent/chat/model picker or separate credentials.
+Shared library, native chat, automatic individual-capture tags/summaries, nested collections, rich notes/images, import and export remain v1 requirements. M2–M5 are roadmapped, not implemented. Follow each host's theme. The plugin owns its chat UI; Hermes owns the execution underneath. No core patches, private imports, copied host internals, new agent loop or separate credentials.
 
 Public repo: `irfansofyana/hermes-bookmarks`. Initial spec: `c1b37f4d278ce76c9ac6632422ecc7e402875f19`; native-chat/UX revision: `b4259228b11bf57f7227e71207b26f833b15ce79`. Detailed Task 1–2 history remains in their verification documents and git history, not duplicated here.

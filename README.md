@@ -2,7 +2,7 @@
 
 A standalone bookmark and image-library plugin for Hermes Desktop, Dashboard, and native chat tools.
 
-**Development preview.** Shared capture/search, durable enrichment jobs, and image attachments are implemented. Real isolated Hermes backend checks pass, and the emitted Dashboard UI has been exercised against that backend in light/dark themes at wide/narrow widths. Full M1 acceptance is still pending: the disposable Desktop app could not finish connecting, Dashboard contextual native-chat handoff is unavailable in the inspected SDK, and no real-model call has been authorized. This is not a v1 release or an approved live deployment.
+**Development preview.** Shared capture/search, durable enrichment jobs, and image attachments are implemented. Real isolated Hermes backend checks pass, and the emitted Dashboard UI has been exercised against that backend in light/dark themes at wide/narrow widths. Full acceptance remains pending: the disposable Desktop app could not finish connecting, the requested in-plugin chat UI is not implemented, and real-model checks are not yet performed. Synthetic real-provider verification and PR publication are now approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
 
 Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
 
@@ -13,7 +13,7 @@ Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verificat
 - Individual captures enqueue durable enrichment jobs. The configured owner profile uses the host's supervised task and LLM facade; leases, fresh claim tokens, revisions, retries and cancellation protect persistence. Saved bookmarks do not depend on model success.
 - Bounded PNG/JPEG/WebP attachments with backend-owned IDs, authenticated delivery, and previews. These are not yet standalone image library items or note embeds.
 - Shared React source emits separate Desktop ESM and Dashboard bundles. Styling follows each host's active theme.
-- Desktop Ask Hermes prepares references for an explicit native session and preserves its draft; it never submits. Its actual-host acceptance is outstanding. Dashboard contextual handoff remains visibly unavailable, with no replacement chat UI.
+- A legacy Desktop draft-handoff prototype is implemented, but it does not fulfill the corrected chat requirement: Bookmarks must have its own visible conversation UI while the plugin stays open, with Hermes underneath. That new UI is not implemented yet. The [Learning reference](docs/verification/in-plugin-chat-reference.md) establishes the intended plugin-UI/Hermes-execution pattern.
 
 ## Native tools
 
@@ -60,4 +60,4 @@ The intended v1 includes Raindrop-inspired grid/list organization, nested collec
 
 Read the [specification](docs/superpowers/specs/2026-10-20-hermes-bookmarks-design.md), [roadmap](docs/ROADMAP.md), and [M1 plan](docs/superpowers/plans/2026-10-20-m1-native-foundation.md). Future sessions start with [AGENTS.md](AGENTS.md) and [STATUS](docs/STATUS.md), not with old conversation summaries.
 
-The official Hermes documentation is the integration contract. `irfansofyana/hermes-blogwatcher` is the owner's requested reference for packaging and host adapters, not a backend copied unchanged. No core patches, private imports, custom chat renderer, separate credential store, catalog listing or release is part of this preview.
+The official Hermes documentation is the integration contract. `irfansofyana/hermes-blogwatcher` is the owner's requested reference for packaging and host adapters, not a backend copied unchanged. The requested plugin-owned chat UI must use public integration contracts underneath. No core patches, private imports, copied internal UI, new agent runtime, separate credential store, catalog listing or release is part of this preview.
