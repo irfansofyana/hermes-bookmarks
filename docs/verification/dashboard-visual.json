@@ -1,0 +1,50 @@
+[
+  {
+    "host": "dashboard",
+    "theme": "dark",
+    "file": "dashboard-dark-1280.png",
+    "actual_host": true,
+    "width": 1280,
+    "height": 1000,
+    "overflow": false,
+    "plugin_overflow": false,
+    "image_width": 320,
+    "color": "color(srgb 1 0.901961 0.796078)"
+  },
+  {
+    "host": "dashboard",
+    "theme": "dark",
+    "file": "dashboard-dark-390.png",
+    "actual_host": true,
+    "width": 390,
+    "height": 1000,
+    "overflow": false,
+    "plugin_overflow": false,
+    "image_width": 320,
+    "color": "color(srgb 1 0.901961 0.796078)"
+  },
+  {
+    "host": "dashboard",
+    "theme": "light (Nous Blue)",
+    "file": "dashboard-light-1280.png",
+    "actual_host": true,
+    "width": 1280,
+    "height": 1000,
+    "overflow": false,
+    "plugin_overflow": false,
+    "image_width": 320,
+    "color": "color(srgb 0 0.32549 0.992157)"
+  },
+  {
+    "host": "dashboard",
+    "theme": "light (Nous Blue)",
+    "file": "dashboard-light-390.png",
+    "actual_host": true,
+    "width": 390,
+    "height": 1000,
+    "overflow": false,
+    "plugin_overflow": false,
+    "image_width": 320,
+    "color": "color(srgb 0 0.32549 0.992157)"
+  }
+]

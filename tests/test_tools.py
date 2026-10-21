@@ -36,17 +36,40 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.client = AsyncClient(transport=ASGITransport(app=app), base_url='http://fixture.invalid')
         self.addAsyncCleanup(self.client.aclose)
 
-    def call(self, name, params):
-        return json.loads(self.tools[name]['handler'](params, session_id='fixture'))
+    async def call(self, name, params):
+        return json.loads(await self.tools[name]['handler'](params, session_id='fixture'))
+
+    async def test_native_handlers_are_registered_for_the_public_async_lane(self):
+        import inspect
+        for tool in self.tools.values():
+            self.assertIs(tool.get('is_async'),True)
+            self.assertTrue(inspect.iscoroutinefunction(tool['handler']))
+
+    async def test_health_reports_registration_startup_without_exposing_paths(self):
+        from runtime import record_startup
+        cleanups=[]
+        ctx=NS(get_config=lambda key,default=None:self.temp.name if key=='library_root' else default,on_unload=cleanups.append)
+        token=bind_runtime(ctx)
+        try:
+            record_startup(token,'fixture','configuration_required')
+            response=await self.client.get('/api/plugins/hermes-bookmarks/health')
+            payload=response.json()
+            self.assertTrue(payload['library_configured'])
+            self.assertIsNone(payload['library_ready'])  # Health performs no storage probe.
+            self.assertIn({'profile':'fixture','result':'configuration_required'},payload['enrichment_startups'])
+            self.assertNotIn(self.temp.name,json.dumps(payload))
+        finally:
+            for cleanup in reversed(cleanups): cleanup()
+        self.assertEqual((await self.client.get('/api/plugins/hermes-bookmarks/health')).json()['enrichment_startups'],[])
 
     async def test_native_save_http_get_and_search_share_data(self):
-        saved = self.call('bookmark_save', {'url': 'https://example.org/a', 'title': 'Shared'})
+        saved = await self.call('bookmark_save', {'url': 'https://example.org/a', 'title': 'Shared'})
         self.assertTrue(saved['ok'])
         item = saved['result']
         response = await self.client.get('/api/plugins/hermes-bookmarks/items/' + item['id'])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), saved)
-        found = self.call('bookmark_search', {'query': 'Shared'})
+        found = await self.call('bookmark_search', {'query': 'Shared'})
         self.assertEqual(found['result']['total'], 1)
         self.assertEqual(item['enrichment_status'], 'pending')
         self.assertTrue(item['enrichment_job_id'])
@@ -55,18 +78,18 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.post('/api/plugins/hermes-bookmarks/items', json={'url': 'https://example.org/b'})
         self.assertEqual(response.status_code, 200)
         item = response.json()['result']
-        self.assertEqual(self.call('bookmark_get', {'item_id': item['id']})['result'], item)
-        self.assertEqual(self.call('bookmark_save', {'url': item['url']})['result']['id'], item['id'])
+        self.assertEqual((await self.call('bookmark_get', {'item_id': item['id']}))['result'], item)
+        self.assertEqual((await self.call('bookmark_save', {'url': item['url']}))['result']['id'], item['id'])
 
     async def test_both_boundaries_reject_wrong_types_and_unknown_fields(self):
         for params in ({'url': 'file:///secret'}, {'url': 'https://example.org', 'unexpected': True}, {'url': 3}):
-            native = self.call('bookmark_save', params)
+            native = await self.call('bookmark_save', params)
             response = await self.client.post('/api/plugins/hermes-bookmarks/items', json=params)
             self.assertFalse(native['ok'])
             self.assertGreaterEqual(response.status_code, 400)
             self.assertEqual(native, response.json())
         for params in ({'query': '', 'limit': True}, {'query': '', 'offset': -1}, {'query': '', 'limit': 101}):
-            self.assertFalse(self.call('bookmark_search', params)['ok'])
+            self.assertFalse((await self.call('bookmark_search', params))['ok'])
 
     async def test_image_upload_preview_and_native_metadata(self):
         from io import BytesIO
@@ -75,7 +98,7 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         response=await self.client.post('/api/plugins/hermes-bookmarks/assets',content=image.getvalue(),headers={'Content-Type':'image/png'})
         self.assertEqual(response.status_code,200)
         item=response.json()['result']
-        got=self.call('bookmark_attachment_get',{'asset_id':item['id']})
+        got=await self.call('bookmark_attachment_get',{'asset_id':item['id']})
         self.assertTrue(got['ok']); self.assertEqual(got['result']['width'],2)
         preview=await self.client.get('/api/plugins/hermes-bookmarks/assets/'+item['id']+'/preview')
         self.assertTrue(preview.json()['result']['content_base64'])

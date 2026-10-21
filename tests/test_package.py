@@ -63,7 +63,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), {
                 'ok': True, 'plugin': 'hermes-bookmarks',
-                'stage': 'foundation_preview', 'library_ready': False,
+                'stage': 'foundation_preview', 'library_ready': False, 'library_configured': False, 'enrichment_startups': [],
             })
             for method in ('post', 'put', 'patch', 'delete'):
                 with self.subTest(method=method):

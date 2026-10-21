@@ -19,6 +19,8 @@ else:
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
 _lock = RLock()
 _roots = {}
+_startups = {}
+_contexts = {}
 
 
 def bind_runtime(ctx):
@@ -44,13 +46,51 @@ def bind_runtime(ctx):
         if root is not None and configured and root not in configured:
             raise ConfigurationError()
         _roots[token] = root
+        _contexts[token] = (ctx, getattr(ctx, "profile_name", "unknown"))
         sys.modules[BRIDGE_NAME] = module
     def release():
         with _lock:
             _roots.pop(token, None)
+            _startups.pop(token, None)
+            _contexts.pop(token, None)
             if not _roots and sys.modules.get(BRIDGE_NAME) is module:
                 sys.modules.pop(BRIDGE_NAME, None)
     cleanup(release)
+    return token
+
+
+def record_startup(token,profile,result):
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]:
+        return bridge.record_startup(token,profile,result)
+    with _lock:
+        if token in _roots: _startups[token]={'profile':profile,'result':result}
+
+
+def ensure_enrichment():
+    """Activate only from a host-owned async entry, never create an event loop.
+
+    Registration is synchronous in the isolated plugin host. Its public async
+    tool/API lane supplies the persistent loop on first use. Only the original
+    context's profile may activate it; spawn_task retains unload ownership.
+    """
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]: return bridge.ensure_enrichment()
+    with _lock:
+        for token,(ctx,profile) in _contexts.items():
+            if profile != getattr(ctx,'profile_name','unknown'): continue
+            if _startups.get(token,{}).get('result')!='host_loop_unavailable': continue
+            module=importlib.import_module('.worker_host',__package__) if __package__ else importlib.import_module('worker_host')
+            record_startup(token,profile,module.start_enrichment(ctx))
+
+
+def get_status():
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]: return bridge.get_status()
+    with _lock:
+        configured=len({root for root in _roots.values() if root is not None})==1
+        return {'library_configured':configured,'library_ready':None if configured else False,
+                'enrichment_startups':[dict(value) for value in _startups.values()]}
 
 
 def get_service():

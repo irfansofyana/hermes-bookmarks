@@ -4,11 +4,16 @@ Direct-router tests do not prove the host's authentication middleware. A cold
 API without native plugin registration returns an actionable configuration error.
 """
 import sys
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-router = APIRouter()
+async def activate_worker():
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None: bridge.ensure_enrichment()
+
+
+router = APIRouter(dependencies=[Depends(activate_worker)])
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
 
 
@@ -25,7 +30,9 @@ def invoke(name, params):
 
 @router.get('/health')
 def get_health():
-    return {'ok': True, 'plugin': 'hermes-bookmarks', 'stage': 'foundation_preview', 'library_ready': False}
+    bridge=sys.modules.get(BRIDGE_NAME)
+    status=bridge.get_status() if bridge is not None else {'library_configured':False,'library_ready':False,'enrichment_startups':[]}
+    return {'ok': True, 'plugin': 'hermes-bookmarks', 'stage': 'foundation_preview', **status}
 
 
 @router.get('/items')

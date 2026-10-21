@@ -1,7 +1,7 @@
 {
   "name": "hermes-bookmarks",
   "label": "Bookmarks",
-  "description": "Read-only foundation preview; not a working bookmark library",
+  "description": "Shared bookmark capture, search and image attachments; development preview",
   "icon": "Globe",
   "version": "0.1.0",
   "tab": { "path": "/bookmarks", "position": "end" },

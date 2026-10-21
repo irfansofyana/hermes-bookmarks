@@ -1,14 +1,15 @@
 """Strict serializable native and HTTP boundary over the shared service."""
 import json
+import asyncio
 import base64
 import binascii
 
 if __package__:
     from .bookmarks.errors import BookmarkError, ValidationError
-    from .runtime import get_service, dispatch, asset_operation
+    from .runtime import get_service, dispatch, asset_operation, ensure_enrichment
 else:
     from bookmarks.errors import BookmarkError, ValidationError
-    from runtime import get_service, dispatch, asset_operation
+    from runtime import get_service, dispatch, asset_operation, ensure_enrichment
 
 SPECS = {
     'bookmark_attachment_add': ('Store user-provided image bytes as an owned attachment; never reads arbitrary local paths or analyzes it with AI.',
@@ -64,9 +65,11 @@ def execute(name, params, service_factory=get_service):
 
 def register_tools(ctx):
     for name, (description, fields, required) in SPECS.items():
-        def handler(params, _name=name, **kwargs):
-            return json.dumps(dispatch(_name, params), ensure_ascii=False)
+        async def handler(params, _name=name, **kwargs):
+            if _name == 'bookmark_save': ensure_enrichment()
+            result=await asyncio.to_thread(dispatch,_name,params)
+            return json.dumps(result, ensure_ascii=False)
         ctx.register_tool(name=name, toolset='hermes_bookmarks',
                           schema={'name': name, 'description': description, 'parameters': {
                               'type': 'object', 'properties': fields, 'required': required, 'additionalProperties': False}},
-                          handler=handler)
+                          handler=handler, is_async=True)
