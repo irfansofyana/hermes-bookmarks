@@ -7,7 +7,7 @@
 3. `docs/ROADMAP.md` for delivery boundaries.
 4. The active milestone plan linked in STATUS.
 
-The owner approved the written library-first design in `docs/superpowers/specs/2026-10-21-library-first-workspace-design.md` with “lets implement all”. The detailed plan is `docs/superpowers/plans/2026-10-21-library-first-workspace.md`; plan review precedes product changes. Preserve the existing hybrid method and the library/chat ownership, draft and manual-edit requirements. See STATUS for the current approval stage rather than asking to approve an already approved artifact again.
+The owner approved both the written library-first design (`docs/superpowers/specs/2026-10-21-library-first-workspace-design.md`) and its detailed plan (`docs/superpowers/plans/2026-10-21-library-first-workspace.md`), explicitly selecting implementation of all tasks using the existing hybrid workflow. Do not re-ask those approvals. Preserve library/chat ownership, drafts and manual-edit requirements; use STATUS for verified task progress.
 
 Do not infer completed implementation from a plan checkbox, an example response, or this conversation. Check the working tree, remote refs, and actual tests. Preserve uncommitted work.
 

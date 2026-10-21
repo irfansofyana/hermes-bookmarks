@@ -64,6 +64,7 @@ for(const target of ['desktop','dashboard']){
   const saved=[{id:'thread-a',session_id:'stored-a',profile:'work',model:null,title:'Thread A',created_at:0},{id:'thread-b',session_id:'stored-b',profile:'work',model:null,title:'Thread B',created_at:0}];
   const app=await mount(target,{saved,overrideRpc:(method,params)=>method==='session.resume'&&params.session_id==='stored-b'?new Promise(resolve=>release=resolve):undefined});
   try{
+   await click(byText('Chat'),app.dom);
    const draft=document.querySelector('textarea[aria-label="Message Hermes"]');await type(draft,'Original A draft',app.dom);
    const select=document.querySelector('select[aria-label="Conversation history"]');
    await React.act(async()=>{select.value='thread-b';select.dispatchEvent(new app.dom.window.Event('change',{bubbles:true}));});
@@ -101,6 +102,7 @@ for(const target of ['desktop','dashboard']){
  test(target+': a restored explicitly selected model accepts follow-up messages without a model reset',async()=>{
   const app=await mount(target,{saved:[{id:'existing-thread',session_id:'stored-chat',profile:'work',model:{provider:'fixture',model:'synthetic'},title:'Saved thread',created_at:0}]});
   try{
+   await click(byText('Chat'),app.dom);
    assert.match(document.querySelector('[role="log"]').textContent,/Saved answer/);
    const draft=document.querySelector('textarea[aria-label="Message Hermes"]');
    await type(draft,'A follow-up',app.dom);

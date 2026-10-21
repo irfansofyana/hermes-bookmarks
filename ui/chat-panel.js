@@ -1,7 +1,7 @@
 function createBookmarksWorkspace(React,adapter,components,styles){
   const {createElement:h,useState,useEffect,useMemo,useRef}=React,Button=components.Button||'button';
   const libraryViews=new Map(),conversationViews=new Map();
-  function ChatPanel({identity,api,scope,selection,onRemove,onChange}){
+  function ChatPanel({identity,api,scope,selection,onRemove,onChange,onState,onStopReady,onClose,visible}){
     const key=JSON.stringify([scope,identity.library_id,identity.profile]);
     if(!conversationViews.has(key))conversationViews.set(key,{draft:'',drafts:{},active:undefined});
     const view=conversationViews.get(key),controller=useRef(null),log=useRef(null),follow=useRef(true),live=useRef(false);
@@ -20,7 +20,7 @@ function createBookmarksWorkspace(React,adapter,components,styles){
       live.current=true;
       const transport=adapter.createTransport(identity,scope);
       const chat=new BookmarkChat({transport,api,identity,onState:next=>{if(live.current){if(next.binding)view.active=next.binding.id;setState(next);}},onChange});
-      controller.current=chat;setState(chat.state);
+      controller.current=chat;setState(chat.state);onStopReady?.(()=>chat.stop());
       (async()=>{
         try{
           const rows=await refreshThreads();if(!live.current)return;
@@ -34,9 +34,10 @@ function createBookmarksWorkspace(React,adapter,components,styles){
         for(const provider of payload.providers||[]){if(!provider.authenticated||!Array.isArray(provider.models))continue;for(const name of provider.models){try{const value=bookmarkModel({provider:provider.slug,model:name});options.push({value:JSON.stringify(value),label:(provider.name||provider.slug)+' · '+name});}catch{/* Unsupported identity is not a selectable model. */}}}
         if(live.current)setModels(options);
       }).catch(()=>{if(live.current)setModelError('Configured models could not be loaded. Your profile default remains available.');});
-      return()=>{live.current=false;chat.dispose();controller.current=null;};
+      return()=>{live.current=false;chat.dispose();controller.current=null;onStopReady?.(null);};
     },[]);
-    useEffect(()=>{if(selection.length&&!view.draft)setDraft('Help me explore this saved bookmark.');if(selection.length)draftRef.current?.focus();},[selection]);
+    useEffect(()=>{if(selection.length&&!view.draft)setDraft('Help me explore this saved bookmark.');if(selection.length&&visible)draftRef.current?.focus();},[selection,visible]);
+    useEffect(()=>{onState?.(state);},[state,onState]);
     useEffect(()=>{setAnswer('');setChoices([]);},[state.pending?.requestId,state.pending?.questions?.[0]?.qid]);
     useEffect(()=>{if(follow.current&&log.current)log.current.scrollTop=log.current.scrollHeight;},[state.messages,state.plan,state.status]);
     async function send(){
@@ -61,7 +62,7 @@ function createBookmarksWorkspace(React,adapter,components,styles){
     const locked=opening||state.busy||state.uncertain,selectedModel=state.binding?state.binding.model?JSON.stringify(state.binding.model):'':model;
     const modelChoices=models.some(item=>item.value===selectedModel)||!selectedModel?models:[{value:selectedModel,label:state.binding.model.provider+' · '+state.binding.model.model},...models];
     return h('aside',{className:'hb-chat','aria-label':'Bookmarks conversation'},
-      h('header',{className:'hb-chat-header'},h('p',{className:'hb-eyebrow'},'HERMES / CONVERSATION'),h('h2',null,'Think with your library.'),h('p',null,identity.profile+' profile · dedicated Hermes session')),
+      h('header',{className:'hb-chat-header'},h('div',null,h('h2',null,'Library chat'),h('p',null,identity.profile+' · Hermes')),h(Button,{type:'button','aria-label':'Close chat',onClick:onClose},'Close chat')),
       h('div',{className:'hb-chat-controls'},
         h('label',null,'Conversation history',h('select',{'aria-label':'Conversation history',value:state.binding?.id||'',disabled:locked,onChange:event=>selectThread(event.target.value)},h('option',{value:''},'New conversation'),threads.map(row=>h('option',{key:row.id,value:row.id},row.title)))),
         h(Button,{type:'button',disabled:locked,onClick:()=>selectThread('')},'New conversation'),
@@ -84,16 +85,23 @@ function createBookmarksWorkspace(React,adapter,components,styles){
     if(!libraryViews.has(scope))libraryViews.set(scope,{query:'',url:'',scroll:0});
     const Library=useMemo(()=>createLibrary(React,adapter,components,styles,libraryViews.get(scope)),[scope]);
     const [identity,setIdentity]=useState(null),[error,setError]=useState(''),[selection,setSelection]=useState([]),[tab,setTab]=useState('library');
-    const refresh=useRef(null);
+    const [opened,setOpened]=useState(false),[chatState,setChatState]=useState({busy:false,pending:null,uncertain:false});
+    const refresh=useRef(null),stop=useRef(null),opener=useRef(null);
     const api=useMemo(()=>async(path,body)=>{
       const check=()=>{if(adapter.currentScope&&adapter.currentScope()!==scope)throw Error('The Hermes profile or connection changed. Reopen Bookmarks.');};
       check();const result=await adapter.request(ctx,path,body===undefined?undefined:{method:'POST',body});check();return result;
     },[ctx,scope]);
-    useEffect(()=>{let active=true;(async()=>{try{const result=await api('/chat/identity');if(!result?.ok||!result.result?.library_id||!result.result.profile)throw Error('Could not resolve the conversation library and profile.');if(active)setIdentity(result.result);}catch{if(active)setError('Chat is unavailable. Enable the native Bookmarks plugin and configure its shared library. Your library remains available.');}})();return()=>{active=false;};},[api]);
-    function ask(item){setSelection(previous=>previous.some(row=>row.id===item.id)?previous:previous.length<20?[...previous,item]:previous);setTab('chat');}
-    return h('div',{className:'hb-workspace','data-view':tab},h('style',null,styles),
-      h('nav',{className:'hb-view-tabs','aria-label':'Bookmarks views'},['library','chat'].map(value=>h(Button,{key:value,type:'button','aria-pressed':tab===value,onClick:()=>setTab(value)},value==='library'?'Library':'Chat'))),
+    useEffect(()=>{if(!opened)return;let active=true;(async()=>{try{const result=await api('/chat/identity');if(!result?.ok||!result.result?.library_id||!result.result.profile)throw Error('Could not resolve the conversation library and profile.');if(active)setIdentity(result.result);}catch{if(active)setError('Chat is unavailable. Enable the native Bookmarks plugin and configure its shared library. Your library remains available.');}})();return()=>{active=false;};},[api,opened]);
+    function openChat(){setOpened(true);setTab('chat');}
+    function closeChat(){setTab('library');opener.current?.focus();}
+    function ask(item){setSelection(previous=>previous.some(row=>row.id===item.id)?previous:previous.length<20?[...previous,item]:previous);openChat();}
+    const status=chatState.pending?'Permission or answer needed':chatState.uncertain?'Delivery uncertain':chatState.busy?'Responding':'Chat';
+    return h('div',{className:'hb-workspace','data-view':tab,'data-chat-open':tab==='chat'},h('style',null,styles),
+      h('nav',{className:'hb-workspace-toolbar','aria-label':'Bookmarks views'},
+        h('strong',null,'Bookmarks'),h('div',null,
+          chatState.busy&&h(Button,{type:'button','aria-label':'Stop conversation',onClick:()=>stop.current?.().catch(()=>{})},'Stop'),
+          h(Button,{ref:opener,type:'button','aria-label':'Chat','aria-expanded':tab==='chat',onClick:()=>tab==='chat'?closeChat():openChat()},'Chat',status==='Chat'?'':' · '+status))),
       h(Library,{ctx,onAsk:ask,onReady:handler=>{refresh.current=handler;}}),
-      identity?h(ChatPanel,{key:JSON.stringify([scope,identity]),identity,scope,api,selection,onRemove:id=>setSelection(current=>current.filter(row=>row.id!==id)),onChange:()=>refresh.current?.()}):h('aside',{className:'hb-chat hb-chat-unavailable'},h('h2',null,'Your library conversation'),h('p',null,error||'Connecting to Hermes…')));
+      opened&&h('div',{className:'hb-chat-shell',hidden:tab!=='chat'},identity?h(ChatPanel,{key:JSON.stringify([scope,identity]),identity,scope,api,selection,visible:tab==='chat',onState:setChatState,onStopReady:handler=>{stop.current=handler;},onClose:closeChat,onRemove:id=>setSelection(current=>current.filter(row=>row.id!==id)),onChange:()=>refresh.current?.()}):h('aside',{className:'hb-chat hb-chat-unavailable'},h('h2',null,'Your library conversation'),h('p',null,error||'Connecting to Hermes…'),h(Button,{type:'button',onClick:closeChat},'Close chat'))));
   };
 }

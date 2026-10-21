@@ -8,7 +8,7 @@
 
 **Tech stack:** Python standard library/SQLite FTS5, existing FastAPI/httpx/Pillow integration, React supplied by Hermes, existing Marked lexer and safe renderer, esbuild-generated Desktop ESM and Dashboard bundles, unittest/Node test runner/React/jsdom and actual-browser acceptance. No new production dependency is needed for this revision.
 
-**Spec:** `docs/superpowers/specs/2026-10-21-library-first-workspace-design.md`, approved by the owner with “lets implement all”. This plan awaits its own written review before product changes.
+**Spec:** `docs/superpowers/specs/2026-10-21-library-first-workspace-design.md`, approved by the owner with “lets implement all”. The owner subsequently approved this plan through the review form: “Approve the plan and implement all tasks using the existing hybrid workflow”. Execution is authorized within the stated development/deployment boundaries.
 
 **Baseline:** `c811880ac7739f805f4622cdb7369f04f7d4c94e`; existing worktree/branch only. Fresh baseline execution: 86 Python tests on CPython 3.14.7 and 41 Node tests passed; deterministic bundle check passed. Those are baseline results, not evidence for any new task.
 
@@ -480,4 +480,4 @@ Resolve the existing isolated CPython 3.11 test interpreter from the previous ve
 
 Self-review: every public operation is defined in the shared-contract block; nested limits and response shapes are explicit; each Review Focus condition has an owner test; every new helper in a snippet is defined in its task; no new dependency/framework or unsupported inference path is required.
 
-Next gate: owner reviews this written plan. The already chosen hybrid execution method remains; do not ask the owner to choose it again. Product changes start after that review, with Task 1's failing interaction tests. This file itself is planning, not completed implementation.
+The owner has approved this written plan and preserved hybrid execution. Execute tasks in dependency order, keeping independent file-owned backend/UI workstreams disjoint. This file describes the work; completed implementation requires the recorded tests and acceptance evidence in STATUS.
