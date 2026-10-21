@@ -43,6 +43,12 @@ The unknown-outcome test explicitly aborts one capture before network dispatch. 
 
 The eight synthetic library/form screenshots were refreshed. Detailed sanitized observations are in `library-first-workspace.json`. This is actual Dashboard acceptance, not connected packaged Electron acceptance.
 
+## CI portability follow-up
+
+The first publication at `265c1ab7647a86d8b9fed529ec3a76e2d6b3c549` failed both Actions events: push `39640432408`, pull request `39640440079`. Both Python jobs passed; the Node job passed 98/100 and failed the Desktop/Dashboard `unreadable legacy URLs cannot crash real persisted library results` tests with `spawnSync rtk ENOENT`. This was an accidental local test-runner dependency, not a plugin/runtime change.
+
+An empty-PATH reproduction failed those same two cases (2/4 passing). The fixture now invokes the documented Python executable directly rather than an agent output wrapper; the identical hermetic run passes 4/4. RTK remains on the agent’s shell commands and is not added as a public CI/package dependency. The full gate was rerun: 147 Python tests per runtime and 100 Node tests passed, with fingerprint `057ea67c4f89eecb065bed4e41c551d873dff0c85d20b2580a50ee090cda36f1` stable over the one-line test fix on `265c1ab`. Product sources and emitted bundles did not change. New exact-head CI must be read back before publication is called verified.
+
 ## Deferred minors
 
 - Author formatting note: the byte-identical original final report contains an intentional two-space Markdown hard line break at line 3. The staged diff check flags it as trailing whitespace. Those original bytes and its checksum are preserved; the staged/range whitespace checks are not described as clean.

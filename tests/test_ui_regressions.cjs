@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),{execFileSy
 const {mount,click,typeField,button}=require('./helpers/emitted-client.cjs');
 function legacyPayload(){
  const code=`import json,tempfile\nfrom pathlib import Path\nfrom bookmarks.service import BookmarkService\nwith tempfile.TemporaryDirectory() as root:\n service=BookmarkService(Path(root))\n service.save_link('https://example.org/healthy','Healthy bookmark')\n with service._storage._transaction(write=True) as c:\n  c.execute('INSERT INTO items(id,url,title) VALUES(?,?,?)',('legacy','https://256.256.256.256/','Legacy bookmark'))\n print(json.dumps({'ok':True,'result':service.search('')}))\n`;
- return JSON.parse(execFileSync('rtk',['proxy',process.env.BOOKMARKS_TEST_PYTHON||'python3','-B','-c',code],{encoding:'utf8'}));
+ return JSON.parse(execFileSync(process.env.BOOKMARKS_TEST_PYTHON||'python3',['-B','-c',code],{encoding:'utf8'}));
 }
 for(const target of ['desktop','dashboard']){
  test(target+': a late Save result cannot revert a newer query intent',async()=>{

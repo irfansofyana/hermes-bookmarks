@@ -52,6 +52,8 @@ These rulings follow ledger order, including the decisions carried forward from 
 
 24. later author fixes require exact-head publication/CI evidence, not a rewritten independent PASS; preserve draft/no merge/release/live install — the immutable report cannot certify later commits — cost if wrong: residual author blind spots remain, and deployment still needs separate approval.
 
+25. invoke the Python interpreter directly in portable test fixtures, keeping RTK only around this agent’s shell commands — GitHub does not install local output wrappers and the JSON fixture needs only Python — cost if wrong: test runners must provide python3 or BOOKMARKS_TEST_PYTHON, as documented.
+
 ## Deferred minors
 
 - M1 saved-outside-filter notice lacks View item; item persists and filter remains unchanged, but users must find it manually.

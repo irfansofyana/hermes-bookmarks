@@ -470,5 +470,84 @@
     "item_id": "b8c14188-56ee-4571-bb9d-4721bebfaf13",
     "operation_key": "7916997f-9805-4b62-9ee0-a0696677555f",
     "asset_id": "40c3ecd72743486cb06fc201482bd12b"
+  },
+  "ci_portability_followup": {
+    "failed_head": "265c1ab7647a86d8b9fed529ec3a76e2d6b3c549",
+    "failed_push_run": 39640432408,
+    "failed_pr_run": 39640440079,
+    "node_passed": 98,
+    "node_failed": 2,
+    "python_jobs": "success on both versions",
+    "error": "spawnSync rtk ENOENT",
+    "hermetic_before": {
+      "mode": "red",
+      "exit_code": 1,
+      "counts": {
+        "tests": 4,
+        "pass": 2,
+        "fail": 2,
+        "skipped": 0
+      },
+      "rtk_available_to_fixture": false,
+      "python_override": true
+    },
+    "hermetic_after": {
+      "mode": "green",
+      "exit_code": 0,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "skipped": 0
+      },
+      "rtk_available_to_fixture": false,
+      "python_override": true
+    },
+    "fix": "Invoke configured Python executable directly in legacy fixture; no product/bundle changes",
+    "full_gate": {
+      "head": "265c1ab7647a86d8b9fed529ec3a76e2d6b3c549",
+      "fingerprint_before": "057ea67c4f89eecb065bed4e41c551d873dff0c85d20b2580a50ee090cda36f1",
+      "fingerprint_after": "057ea67c4f89eecb065bed4e41c551d873dff0c85d20b2580a50ee090cda36f1",
+      "stable": true,
+      "all_passed": true
+    },
+    "checks": [
+      {
+        "check": "python314",
+        "exit_code": 0,
+        "stable": true,
+        "tests": 147
+      },
+      {
+        "check": "python311",
+        "exit_code": 0,
+        "stable": true,
+        "tests": 147
+      },
+      {
+        "check": "node",
+        "exit_code": 0,
+        "stable": true,
+        "tests": 100
+      },
+      {
+        "check": "build",
+        "exit_code": 0,
+        "stable": true,
+        "tests": null
+      },
+      {
+        "check": "syntax",
+        "exit_code": 0,
+        "stable": true,
+        "tests": null
+      },
+      {
+        "check": "diff",
+        "exit_code": 0,
+        "stable": true,
+        "tests": null
+      }
+    ]
   }
 }
