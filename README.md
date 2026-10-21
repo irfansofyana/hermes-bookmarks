@@ -2,28 +2,39 @@
 
 A standalone bookmark and image-library plugin for Hermes Desktop, Dashboard, and native chat tools.
 
-**Development preview.** Shared capture/search, durable enrichment jobs, image attachments and the plugin-owned chat UI are implemented. Chat has focused controller/transport and both-emitted-client React tests; authenticated real-host binding routes pass. Connected Desktop and real-provider acceptance remain open; see current verification rather than treating unit tests as installed-host proof. Synthetic real-provider verification and PR publication are approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
+**Development preview.** The library-first workspace now includes nested collections, tags, grid/list views, metadata/notes/image dialogs, revision-safe edits, durable capture receipts, and collapsible Hermes-backed chat. Chat has focused controller/transport and both-emitted-client React tests; authenticated real-host binding routes pass. Connected Desktop and real-provider acceptance remain open; see current verification rather than treating unit tests as installed-host proof. Synthetic real-provider verification and PR publication are approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
 
-Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
+Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). Current workspace evidence is tracked in [library-first verification](docs/verification/library-first-workspace.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
 
 ## Working foundation
 
 - One SQLite library at an explicit absolute backend directory. Profiles that participate must configure the same directory; profile names are not privacy boundaries or cross-machine sync.
 - Shared save/get/search service behind native tools and authenticated plugin HTTP routes. Duplicate saves preserve the existing record.
-- Individual captures enqueue durable enrichment jobs. The configured owner profile uses the host's supervised task and LLM facade; leases, fresh claim tokens, revisions, retries and cancellation protect persistence. Saved bookmarks do not depend on model success.
-- Bounded PNG/JPEG/WebP attachments with backend-owned IDs, authenticated delivery, and previews. These are not yet standalone image library items or note embeds.
+- Individual link captures enqueue durable enrichment jobs. The configured owner profile uses the host's supervised task and LLM facade; leases, fresh claim tokens, revisions, retries and cancellation protect persistence. Saved bookmarks do not depend on model success.
+- Bounded PNG/JPEG/WebP images with backend-owned IDs, authenticated delivery, previews, standalone image items and item attachments. Standalone image analysis and inline note embeds remain unavailable.
+- Library-first browsing offers nested collections, whole-library counts, tags and AND filters, grid/list views and pagination. Add/Edit dialogs keep description, personal Markdown notes and AI summaries separate. Stale revisions reject without overwriting; uncertain captures are reconciled using their original operation key.
 - Shared React source emits separate Desktop ESM and Dashboard bundles. Styling follows each host's active theme.
-- A plugin-owned conversation panel stays alongside the library (or in the in-plugin Chat view on narrow screens), backed by dedicated Hermes-managed sessions. It supports explicit Send, streaming, safe Markdown, tool summaries, real plans, approvals/clarification, Stop, model choice for new conversations and profile-scoped history. This replaces the legacy draft handoff; no ordinary focused chat is adopted. See [chat verification](docs/verification/in-plugin-chat.md) for current evidence and remaining host gates.
+- Chat is initially closed and opens explicitly. Collapse preserves session, draft and running output; Stop is a separate action. A plugin-owned conversation panel stays alongside the library (or in the in-plugin Chat view on narrow screens), backed by dedicated Hermes-managed sessions. It supports explicit Send, streaming, safe Markdown, tool summaries, real plans, approvals/clarification, Stop, model choice for new conversations and profile-scoped history. This replaces the legacy draft handoff; no ordinary focused chat is adopted. See [chat verification](docs/verification/in-plugin-chat.md) for current evidence and remaining host gates.
 
 ## Native tools
 
 | Tool | Purpose |
 | --- | --- |
-| `bookmark_save` | Save a URL and queue configured enrichment |
+| `bookmark_save` | Capture a link/image with metadata and an optional idempotency key; links queue configured enrichment |
 | `bookmark_get` | Read a saved item |
-| `bookmark_search` | Search titles/URLs or list the library |
+| `bookmark_search` | Search saved metadata/notes/tags and combine collection, tag and smart-view filters |
 | `bookmark_attachment_add` | Validate and store supplied base64 image bytes |
 | `bookmark_attachment_get` | Read owned-attachment metadata and an authenticated API reference |
+| `bookmark_update` | Atomically update metadata, tags and image associations at an expected revision |
+| `bookmark_note_update` | Replace or explicitly append personal Markdown notes |
+| `bookmark_capture_status` | Read a capture receipt and current item without retrying the write |
+| `bookmark_collection_list` | Page collections or search with ancestor paths |
+| `bookmark_collection_create` | Create a collection under an optional parent |
+| `bookmark_collection_update` | Rename or move with revision/cycle checks |
+| `bookmark_collection_delete` | Delete a collection with an explicit non-destructive contents policy |
+| `bookmark_tag_list` | Page normalized effective tags with whole-library counts |
+| `bookmark_library_identity` | Read the installation-owned shared library identity |
+| `bookmark_counts` | Read All, Inbox, Favorites and Read later counts |
 
 Native tools are registered through Hermes's public async lane. Owner capture and authenticated async API entry can activate the supervised worker after synchronous registration; the plugin never creates an event loop or a persistent sidecar. The worker survives request completion and is not owned by a browser tab. Missing configuration or capabilities are reported separately from saved-item success.
 
@@ -56,10 +67,10 @@ The `ui/` library/chat JavaScript and scoped CSS files are sources; run `rtk pro
 
 ## Product direction and remaining milestones
 
-The intended v1 includes Raindrop-inspired grid/list organization, nested collections, tags, favorites/read-later, rich notes with inline images, standalone image items, configuration controls, import and export, and native agent workflows. Bulk imports default to no enrichment unless explicitly opted in; note images are not automatically analyzed. These capabilities remain on the roadmap and are not implied by the foundation preview.
+The intended v1 includes Raindrop-inspired grid/list organization, nested collections, tags, favorites/read-later, rich notes with inline images, standalone image items, configuration controls, import and export, and native agent workflows. Bulk imports default to no enrichment unless explicitly opted in; note images are not automatically analyzed. The organization workspace, standalone image records and Markdown notes are implemented in this revision. Rich-text/inline images, visual AI, settings, trash/restore, import/export and all-target acceptance remain on the roadmap.
 
 Read the [specification](docs/superpowers/specs/2026-10-20-hermes-bookmarks-design.md), [roadmap](docs/ROADMAP.md), and [M1 plan](docs/superpowers/plans/2026-10-20-m1-native-foundation.md). Future sessions start with [AGENTS.md](AGENTS.md) and [STATUS](docs/STATUS.md), not with old conversation summaries.
 
-The next UX revision has an approved [written design](docs/superpowers/specs/2026-10-21-library-first-workspace-design.md): library-first browsing, collapsible chat, collections/tags and an Add/Edit popup with notes/image attachments. Its [implementation plan](docs/superpowers/plans/2026-10-21-library-first-workspace.md) is ready for required review; these are planned changes, not capabilities in the current preview.
+The current revision follows the approved [workspace design](docs/superpowers/specs/2026-10-21-library-first-workspace-design.md) and [implementation plan](docs/superpowers/plans/2026-10-21-library-first-workspace.md). Follow [workspace evidence](docs/verification/library-first-workspace.md) for tested, protocol-only and blocked acceptance rows.
 
 The official Hermes documentation is the integration contract. `irfansofyana/hermes-blogwatcher` is the owner's requested reference for packaging and host adapters, not a backend copied unchanged. The requested plugin-owned chat UI must use public integration contracts underneath. No core patches, private imports, copied internal UI, new agent runtime, separate credential store, catalog listing or release is part of this preview.

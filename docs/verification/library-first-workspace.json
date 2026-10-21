@@ -1,0 +1,315 @@
+{
+  "scope": "library-first development revision",
+  "actual_host_smoke": {
+    "ok": true,
+    "synthetic_writes": true,
+    "checks": [
+      {
+        "name": "none GET denied",
+        "ok": true
+      },
+      {
+        "name": "none POST denied",
+        "ok": true
+      },
+      {
+        "name": "invalid GET denied",
+        "ok": true
+      },
+      {
+        "name": "invalid POST denied",
+        "ok": true
+      },
+      {
+        "name": "GET /library/identity",
+        "ok": true
+      },
+      {
+        "name": "library identity",
+        "ok": true
+      },
+      {
+        "name": "POST /assets/base64",
+        "ok": true
+      },
+      {
+        "name": "POST /collections",
+        "ok": true
+      },
+      {
+        "name": "POST /collections",
+        "ok": true
+      },
+      {
+        "name": "POST /items",
+        "ok": true
+      },
+      {
+        "name": "capture retained all metadata",
+        "ok": true
+      },
+      {
+        "name": "POST /items",
+        "ok": true
+      },
+      {
+        "name": "same-key replay",
+        "ok": true
+      },
+      {
+        "name": "GET /items/b8c14188-56ee-4571-bb9d-4721bebfaf13",
+        "ok": true
+      },
+      {
+        "name": "POST /items/b8c14188-56ee-4571-bb9d-4721bebfaf13/update",
+        "ok": true
+      },
+      {
+        "name": "revision-safe edit",
+        "ok": true
+      },
+      {
+        "name": "stale revision rejects atomically",
+        "ok": true
+      },
+      {
+        "name": "GET /items",
+        "ok": true
+      },
+      {
+        "name": "descendant and repeated-tag AND query",
+        "ok": true
+      },
+      {
+        "name": "GET /counts",
+        "ok": true
+      },
+      {
+        "name": "snapshot counts",
+        "ok": true
+      },
+      {
+        "name": "POST /items",
+        "ok": true
+      },
+      {
+        "name": "standalone image has no URL and honest status",
+        "ok": true
+      },
+      {
+        "name": "GET /captures/7916997f-9805-4b62-9ee0-a0696677555f",
+        "ok": true
+      },
+      {
+        "name": "receipt preserves accepted identity",
+        "ok": true
+      },
+      {
+        "name": "GET /items/b8c14188-56ee-4571-bb9d-4721bebfaf13",
+        "ok": true
+      },
+      {
+        "name": "readback preserves edited note and owned association",
+        "ok": true
+      },
+      {
+        "name": "GET /assets/40c3ecd72743486cb06fc201482bd12b/preview",
+        "ok": true
+      },
+      {
+        "name": "authenticated preview",
+        "ok": true
+      }
+    ],
+    "library_id": "0934b83466cd2bb2d35e4129c476c697",
+    "item_id": "b8c14188-56ee-4571-bb9d-4721bebfaf13",
+    "asset_id": "40c3ecd72743486cb06fc201482bd12b",
+    "collection_id": "4e27a02e-a862-451b-8c49-b25dfaa7a4b8",
+    "operation_key": "7916997f-9805-4b62-9ee0-a0696677555f",
+    "image_item_id": "c83e9889-9de2-4c4d-8101-6530836e2a1a"
+  },
+  "after_owned_restart": {
+    "ok": true,
+    "synthetic_writes": false,
+    "checks": [
+      {
+        "name": "none GET denied",
+        "ok": true
+      },
+      {
+        "name": "none POST denied",
+        "ok": true
+      },
+      {
+        "name": "invalid GET denied",
+        "ok": true
+      },
+      {
+        "name": "invalid POST denied",
+        "ok": true
+      },
+      {
+        "name": "GET /library/identity",
+        "ok": true
+      },
+      {
+        "name": "library identity",
+        "ok": true
+      },
+      {
+        "name": "GET /captures/7916997f-9805-4b62-9ee0-a0696677555f",
+        "ok": true
+      },
+      {
+        "name": "receipt preserves accepted identity",
+        "ok": true
+      },
+      {
+        "name": "GET /items/b8c14188-56ee-4571-bb9d-4721bebfaf13",
+        "ok": true
+      },
+      {
+        "name": "readback preserves edited note and owned association",
+        "ok": true
+      },
+      {
+        "name": "GET /assets/40c3ecd72743486cb06fc201482bd12b/preview",
+        "ok": true
+      },
+      {
+        "name": "authenticated preview",
+        "ok": true
+      }
+    ],
+    "library_id": "0934b83466cd2bb2d35e4129c476c697",
+    "item_id": "b8c14188-56ee-4571-bb9d-4721bebfaf13",
+    "operation_key": "7916997f-9805-4b62-9ee0-a0696677555f",
+    "asset_id": "40c3ecd72743486cb06fc201482bd12b"
+  },
+  "actual_dashboard_browser": {
+    "ok": true,
+    "actual_host": true,
+    "synthetic_writes": true,
+    "rows": [
+      {
+        "check": "actual_dashboard_text_color",
+        "actual": "color(srgb 0 0.32549 0.992157)",
+        "expected": "color-mix(in srgb, #0053FD 100%, transparent)"
+      },
+      {
+        "check": "dirty_escape_keep_discard_focus_containment_return",
+        "ok": true
+      },
+      {
+        "check": "actual_form_capture_upload_edit_authenticated_readback",
+        "ok": true,
+        "item_id": "add2f0a5-999b-4baa-b5a5-e16c9878de44"
+      },
+      {
+        "check": "visual",
+        "theme": "dark",
+        "file": "bookmarks-library-dashboard-dark-1440.png",
+        "viewport": 1440,
+        "width": 1145,
+        "document_overflow": false,
+        "workspace_overflow": false,
+        "library_visible": true,
+        "color": "color(srgb 1 0.901961 0.796078)"
+      },
+      {
+        "check": "form_visual",
+        "theme": "dark",
+        "file": "bookmarks-library-form-dark-1440.png",
+        "dialog_overflow": false,
+        "width": 418,
+        "height": 1062
+      },
+      {
+        "check": "visual",
+        "theme": "dark",
+        "file": "bookmarks-library-dashboard-dark-390.png",
+        "viewport": 390,
+        "width": 358,
+        "document_overflow": false,
+        "workspace_overflow": false,
+        "library_visible": true,
+        "color": "color(srgb 1 0.901961 0.796078)"
+      },
+      {
+        "check": "form_visual",
+        "theme": "dark",
+        "file": "bookmarks-library-form-dark-390.png",
+        "dialog_overflow": false,
+        "width": 376,
+        "height": 1086
+      },
+      {
+        "check": "visual",
+        "theme": "light",
+        "file": "bookmarks-library-dashboard-light-1440.png",
+        "viewport": 1440,
+        "width": 1145,
+        "document_overflow": false,
+        "workspace_overflow": false,
+        "library_visible": true,
+        "color": "color(srgb 0 0.32549 0.992157)"
+      },
+      {
+        "check": "form_visual",
+        "theme": "light",
+        "file": "bookmarks-library-form-light-1440.png",
+        "dialog_overflow": false,
+        "width": 418,
+        "height": 1062
+      },
+      {
+        "check": "visual",
+        "theme": "light",
+        "file": "bookmarks-library-dashboard-light-390.png",
+        "viewport": 390,
+        "width": 358,
+        "document_overflow": false,
+        "workspace_overflow": false,
+        "library_visible": true,
+        "color": "color(srgb 0 0.32549 0.992157)"
+      },
+      {
+        "check": "form_visual",
+        "theme": "light",
+        "file": "bookmarks-library-form-light-390.png",
+        "dialog_overflow": false,
+        "width": 376,
+        "height": 1086
+      },
+      {
+        "check": "container_resize_and_theme_preserve_library_chat",
+        "ok": true
+      },
+      {
+        "check": "reopened_persistence",
+        "ok": true
+      }
+    ],
+    "page_errors": [],
+    "rpc_methods": [
+      "client.capabilities",
+      "model.options"
+    ],
+    "provider_inference": false
+  },
+  "actual_native_registry": {
+    "ok": true,
+    "item_id": "b8c14188-56ee-4571-bb9d-4721bebfaf13",
+    "operations": [
+      "bookmark_get",
+      "bookmark_counts",
+      "bookmark_library_identity",
+      "bookmark_capture_status"
+    ],
+    "provider_inference": false
+  },
+  "provider_inference": false,
+  "connected_electron_verified": false,
+  "oauth_independent_machine_verified": false,
+  "review_status": "boundary and final revision pending"
+}
