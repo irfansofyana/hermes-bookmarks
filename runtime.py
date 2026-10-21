@@ -161,6 +161,35 @@ def dispatch(name, params):
     return module.execute(name, params, get_service)
 
 
+def chat_operation(operation, params=None):
+    """Resolve profile in the request's context, never the process environment."""
+    bridge = sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]:
+        return bridge.chat_operation(operation, params)
+    try:
+        with _lock:
+            owners = {profile for ctx, profile in _contexts.values()
+                      if profile != 'unknown' and profile == getattr(ctx, 'profile_name', 'unknown')}
+        if len(owners) != 1:
+            raise ConfigurationError()
+        profile = owners.pop()
+        module = importlib.import_module('.bookmarks.chat', __package__) if __package__ else importlib.import_module('bookmarks.chat')
+        store = module.ChatStore(get_service()._storage.database_path.parent)
+        if operation == 'identity':
+            result = store.identity(profile)
+        elif operation == 'threads':
+            result = store.threads(profile, params)
+        elif operation == 'bind':
+            result = store.bind(profile, params)
+        else:
+            raise ValueError('Unknown chat operation')
+        return {'ok': True, 'result': result}
+    except BookmarkError as exc:
+        return {'ok': False, 'error': {'code': exc.code, 'message': exc.message}}
+    except (ValueError, TypeError):
+        return {'ok': False, 'error': {'code': 'invalid_argument', 'message': 'Invalid conversation binding or pagination.'}}
+
+
 def asset_operation(operation, *args):
     bridge = sys.modules.get(BRIDGE_NAME)
     if bridge is not None and bridge is not sys.modules[__name__]:

@@ -50,6 +50,15 @@ MIGRATIONS = (
             size INTEGER NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL)
         """,
     ),
+    (
+        "INSERT INTO library_config(key,value) VALUES('library_id',lower(hex(randomblob(16))))",
+        """CREATE TABLE chat_threads (
+            id TEXT PRIMARY KEY NOT NULL, profile TEXT NOT NULL,
+            session_id TEXT NOT NULL, title TEXT NOT NULL, model TEXT NOT NULL,
+            created_at REAL NOT NULL DEFAULT ((julianday('now')-2440587.5)*86400.0),
+            UNIQUE(profile,session_id))""",
+        "CREATE INDEX chat_threads_profile ON chat_threads(profile,created_at DESC)",
+    ),
 )
 
 

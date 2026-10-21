@@ -1,12 +1,12 @@
-function createLibrary(React, adapter, components, styles) {
+function createLibrary(React, adapter, components, styles, view = {query: '', url: '', scroll: 0}) {
   const {createElement: h, useState, useEffect, useRef} = React;
   const Button = components.Button || 'button';
   const Input = components.Input || 'input';
-  const view = {query: '', url: '', scroll: 0};
+
   function displayHostname(url) {
     try {return new URL(url).hostname;} catch (_) {return 'Hostname unavailable';}
   }
-  return function Bookmarks({ctx} = {}) {
+  return function Bookmarks({ctx, onAsk, onReady} = {}) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -16,25 +16,12 @@ function createLibrary(React, adapter, components, styles) {
     const [asset, setAsset] = useState(null), [uploading, setUploading] = useState(false);
     const uploadBusy = useRef(false);
     const [query, setQuery] = useState(view.query);
-    const [ask, setAsk] = useState(null);
-    const [preparing, setPreparing] = useState(false);
-    const handoffBusy = useRef(false);
+
     const surface = useRef(null);
     const busy = useRef(false), generation = useRef(0), alive = useRef(true);
     const form = useRef(null);
     useEffect(() => { if (surface.current) surface.current.scrollTop = view.scroll; }, [loading]);
-    async function prepareChat() {
-      if (!ask || handoffBusy.current) return;
-      handoffBusy.current = true; setPreparing(true);
-      view.url = form.current?.elements.url.value || '';
-      const result = await adapter.chat.prepare({target:ask.target,itemIds:[ask.id],prompt:'Help me explore this saved bookmark.',append:true});
-      if (alive.current) {
-        setPreparing(false);
-        if (!result.ok) setError('Native chat could not accept this context (' + result.reason + '). Open the intended conversation and try again.');
-        else { setAsk(null); setNotice('References appended to the native draft. Nothing was sent.'); }
-      }
-      handoffBusy.current = false;
-    }
+
     async function load(term) {
       const version = ++generation.current;
       setLoading(true);
@@ -51,6 +38,7 @@ function createLibrary(React, adapter, components, styles) {
       }
     }
     useEffect(() => { alive.current = true; load(query); return () => {alive.current = false; generation.current++;}; }, [query]);
+    useEffect(() => {onReady?.(() => load(view.query)); return () => onReady?.(null);}, []);
     async function save(e) {
       e.preventDefault();
       if (busy.current) return;
@@ -126,11 +114,7 @@ function createLibrary(React, adapter, components, styles) {
           h('a', {href: item.url, target: '_blank', rel: 'noopener noreferrer'}, item.title || item.url),
           h('p', null, displayHostname(item.url))),
         h('span', {className: 'hb-item-status'}, ({succeeded:'Summary saved',pending:'Enrichment queued',running:'Enriching…',failed:'Enrichment failed',cancelled:'Cancelled'})[item.enrichment_status] || 'AI not connected'),
-        h(Button, {type:'button', disabled:!adapter.chat?.snapshot(), title:'Prepare bookmark references in native Hermes chat', onClick:()=>setAsk({id:item.id,target:adapter.chat.snapshot()})}, 'Ask Hermes')))),
-      ask && h('aside', {className:'hb-capture', 'aria-label':'Native chat context'},
-        h('p', null, 'Append bookmark references to ' + ask.target.owner.profile + ' / ' + ask.target.sessionId + '. Existing draft text is kept. Nothing is sent automatically.'),
-        h(Button, {type:'button', disabled:preparing, onClick:prepareChat}, preparing ? 'Preparing…' : 'Append to native draft'),
-        h(Button, {type:'button', onClick:()=>setAsk(null)}, 'Cancel')),
-      h('footer', {className: 'hb-footer'}, 'Native chat uses your Hermes session. Context handoff is unavailable without a supported target (including the current Dashboard SDK). Enrichment requires a configured owner/model and a running host supervisor. Image attachments do not yet appear as standalone library items.'));
+        h(Button, {type:'button', disabled:!onAsk, title:'Discuss this bookmark inside Bookmarks', onClick:()=>onAsk?.(item)}, 'Ask Hermes')))),
+      h('footer', {className: 'hb-footer'}, 'Chat stays inside Bookmarks and runs through Hermes. Background enrichment uses the separate library model. Image attachments do not yet appear as standalone library items.'));
   };
 }

@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Owner UI correction (2026-10-21):** the open Bookmarks plugin needs its own chat interface alongside the library. It must not primarily send the user to the usual Hermes session chat. Reusing Hermes execution underneath is compatible with a plugin-owned UI. The previous native-screen/draft-handoff interpretation was wrong; existing handoff code/evidence is historical, not fulfillment of this requirement. Backend session ownership, streaming and public API support need a corrected integration design before new chat code. No new UI implementation is claimed.
+**In-plugin chat (2026-10-21):** owner approved implementation after the Learning architecture report. Bookmarks now has its own transcript/composer, dedicated Hermes sessions, profile-scoped durable bindings, streaming/activity/plan/decision controls, Stop, history and new-conversation model selection. The native-screen/draft-handoff source and obsolete tests are removed. Focused new tests and both emitted React entrypoints pass; real authenticated binding routes pass. Actual-host conversation/visual checks and a targeted new-boundary review are in progress. See `verification/in-plugin-chat.md`; do not confuse implementation with all-target/provider acceptance.
 
 **Verified chat reference:** owner-requested `irfansofyana/hermes-learning`, commit `2a9f2e2fd9c5007996dc7a6b7f16f50a306a6c10`. Its plugin-owned TutorPanel uses real Hermes sessions through Desktop public gateway methods/events and Dashboard SDK-authenticated WebSocket JSON-RPC. Inspected source matches installed Learning; 58 focused controller/transport tests passed. See `docs/verification/in-plugin-chat-reference.md`. This removes the mistaken native-composer/handoff blocker, not Bookmarks' own implementation/runtime acceptance work.
 
@@ -17,11 +17,11 @@ The owner approved subagent-driven execution, then explicitly switched to **hybr
 | 1: public contracts/package | Approved at `a51a493`; both minors fixed in Task 3. Historical host/build provenance: `verification/compatibility.md`. |
 | 2: durable shared service | Approved at `13d6e004db6efa035f2300a468267e8e1f63e60e`; storage/multi-process evidence: `verification/service.md`. |
 | 3: native tools/dual-host UI | Locally implemented at `51b1f3c`; initial evidence: `verification/capture.md`; newer real-host checks below. |
-| 4: native handoff | Implemented at `b03c42b`, exact-target/draft/focus tests passed. Connected Desktop acceptance remains blocked; Dashboard contextual handoff is unsupported in the inspected SDK. `verification/native-chat.md`. |
+| 4: in-plugin conversation | Replaces the historical `b03c42b` handoff. New public Hermes-backed controller, transports, scoped binding API and owned chat UI are implemented; tests pass. Current evidence: `verification/in-plugin-chat.md`. |
 | 5: jobs/enrichment | `98391e8`, targeted review fixes at `5ea3920`, then actual-host async activation fix in Task 6. Real host consumed an intentionally incomplete job after the initiating request ended; no real model call used. |
 | 6: image/integration | Image slice at `44014f3`; real cold-host auth/image/reopen/native-registry checks and Dashboard visual matrix now exercised. Final whole-branch review consumed; all three Important findings fixed in one RED→GREEN pass. Two UI minors are deferred. M1 remains incomplete because target/model gates are open. |
 
-Latest verification: **82 Python tests passed on CPython 3.14.7 and CPython 3.11.14; 14 Node tests passed**. Deterministic bundle, Desktop syntax, whitespace and official plugin validation passed (`ok: true`, no warnings). Nonfatal async slow-callback diagnostics from parallel runs are recorded, not hidden. No remote CI is claimed.
+Chat checkpoint: **86 Python tests passed on CPython 3.14.7; 27 Node tests passed before the additional two restored-model regressions, whose focused six-test UI run now passes**. Whole suites are rerun before completion. Prior committed checkpoint `8f0a2e9`: 82 Python on both 3.14/3.11 and 14 Node, official validation passed. Nonfatal async slow-callback diagnostics are recorded, not hidden. No remote CI or new provider acceptance is claimed.
 
 ## Read next
 
@@ -52,7 +52,7 @@ Code review/fix gates are consumed, not pending. Deferred UI minors: global Retr
 
 ## Next runnable action
 
-Use the verified Learning reference to correct the chat design: plugin-owned panel/controller with real Hermes sessions, Desktop host request/events and Dashboard SDK-authenticated gateway transport. Adapt bounded bookmark context and shared-library versus conversation ownership; do not copy teaching/assessment logic or depend on Learning being installed. Verify the actual Bookmarks adapters separately. Present the revised design before product implementation; preserve the approved hybrid execution method. The M1 review/fix pass is historical and finished; do not repeat it. Continue the approved synthetic model/target checks within scope. Prepare a PR once implementation/verification is ready; do not merge, release or install live.
+Finish actual isolated chat/visual checks and the targeted new ownership/auth/lifecycle review; fix Important findings in one RED→GREEN pass. Local execution brief: `.superpowers/sdd/2026-10-20-m1-native-foundation/chat-implementation.md`. The old M1 whole-branch review remains consumed; do not repeat it. Keep synthetic model verification separately labeled: the disposable host intentionally has no credentials. Prepare the authorized PR when evidence is ready, without merge/release/live installation.
 
 Use current files/git and the ledger, not checked-box totals or old conversation summaries. Preserve uncommitted work. Keep local review artifacts while target acceptance is unfinished.
 

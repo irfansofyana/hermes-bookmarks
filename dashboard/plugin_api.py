@@ -80,6 +80,37 @@ def asset_response(payload):
     return JSONResponse(payload, status_code=200 if payload['ok'] else {'not_found':404,'configuration_error':503,'storage_error':503}.get(code,400))
 
 
+def chat_response(operation, params=None):
+    bridge = sys.modules.get(BRIDGE_NAME)
+    payload = bridge.chat_operation(operation, params) if bridge else {'ok': False, 'error': {'code': 'configuration_error', 'message': 'Enable the native plugin and configure its shared library root.'}}
+    return asset_response(payload)
+
+
+@router.get('/chat/identity')
+def chat_identity():
+    return chat_response('identity')
+
+
+@router.get('/chat/threads')
+def chat_threads(request: Request):
+    return chat_response('threads', dict(request.query_params))
+
+
+@router.post('/chat/threads')
+async def bind_chat_thread(request: Request):
+    import json
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > 16384:
+            return JSONResponse({'ok': False, 'error': {'code': 'invalid_argument', 'message': 'Request exceeds 16 KiB.'}}, status_code=413)
+    try:
+        body = json.loads(data)
+    except (ValueError, UnicodeDecodeError):
+        body = None
+    return await run_in_threadpool(chat_response, 'bind', body)
+
+
 @router.post('/assets/base64')
 async def upload_asset_json(request: Request):
     import json

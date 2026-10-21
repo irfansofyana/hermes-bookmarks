@@ -2,7 +2,7 @@
 
 A standalone bookmark and image-library plugin for Hermes Desktop, Dashboard, and native chat tools.
 
-**Development preview.** Shared capture/search, durable enrichment jobs, and image attachments are implemented. Real isolated Hermes backend checks pass, and the emitted Dashboard UI has been exercised against that backend in light/dark themes at wide/narrow widths. Full acceptance remains pending: the disposable Desktop app could not finish connecting, the requested in-plugin chat UI is not implemented, and real-model checks are not yet performed. Synthetic real-provider verification and PR publication are now approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
+**Development preview.** Shared capture/search, durable enrichment jobs, image attachments and the plugin-owned chat UI are implemented. Chat has focused controller/transport and both-emitted-client React tests; authenticated real-host binding routes pass. Connected Desktop and real-provider acceptance remain open; see current verification rather than treating unit tests as installed-host proof. Synthetic real-provider verification and PR publication are approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
 
 Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
 
@@ -13,7 +13,7 @@ Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verificat
 - Individual captures enqueue durable enrichment jobs. The configured owner profile uses the host's supervised task and LLM facade; leases, fresh claim tokens, revisions, retries and cancellation protect persistence. Saved bookmarks do not depend on model success.
 - Bounded PNG/JPEG/WebP attachments with backend-owned IDs, authenticated delivery, and previews. These are not yet standalone image library items or note embeds.
 - Shared React source emits separate Desktop ESM and Dashboard bundles. Styling follows each host's active theme.
-- A legacy Desktop draft-handoff prototype is implemented, but it does not fulfill the corrected chat requirement: Bookmarks must have its own visible conversation UI while the plugin stays open, with Hermes underneath. That new UI is not implemented yet. The [Learning reference](docs/verification/in-plugin-chat-reference.md) establishes the intended plugin-UI/Hermes-execution pattern.
+- A plugin-owned conversation panel stays alongside the library (or in the in-plugin Chat view on narrow screens), backed by dedicated Hermes-managed sessions. It supports explicit Send, streaming, safe Markdown, tool summaries, real plans, approvals/clarification, Stop, model choice for new conversations and profile-scoped history. This replaces the legacy draft handoff; no ordinary focused chat is adopted. See [chat verification](docs/verification/in-plugin-chat.md) for current evidence and remaining host gates.
 
 ## Native tools
 
@@ -50,7 +50,7 @@ rtk proxy node --check desktop/plugin.js
 rtk proxy git diff --check
 ```
 
-`ui/library.js`, `ui/library.css`, and `ui/native-chat.js` are sources; run `rtk proxy node scripts/build-ui.cjs` after changing them. Commit both emitted bundles. Hermes supplies React and SDK components at runtime; development React/jsdom dependencies are not bundled into the plugin.
+The `ui/` library/chat JavaScript and scoped CSS files are sources; run `rtk proxy node scripts/build-ui.cjs` after changing them. Commit both emitted bundles. Hermes supplies React and SDK components at runtime. Marked is bundled only as a Markdown lexer, with its full license embedded; an allowlisted React renderer rejects raw HTML, executable links and automatic remote image loads. esbuild/React/jsdom are development dependencies, not separate agent runtimes.
 
 `scripts/host_smoke.py` checks a real backend. It defaults to GET-only checks (owner activation can resume previously queued automatic work), takes an explicit origin and token-file path, rejects redirects/credential URLs, and requires `--allow-write` for synthetic capture/image operations. Use a disposable Hermes home; the script does not configure, restart, install into, or fabricate responses for a host. Never commit token files or real user data.
 
