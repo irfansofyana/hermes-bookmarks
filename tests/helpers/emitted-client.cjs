@@ -20,9 +20,9 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
  const items=[item],collections=[{id:'engineering',name:'Engineering',parent_id:null,revision:1,count:1,path:[{id:'engineering',name:'Engineering'}]}];
  async function api(raw,init){
   const route=raw.replace('/api/plugins/hermes-bookmarks','');
-  const body=typeof init?.body==='string'?JSON.parse(init.body):init?.body;
+  const body=typeof init?.body==='string'?JSON.parse(init.body):init?.body===undefined?undefined:JSON.parse(JSON.stringify(init.body));
   const request=init?{...init,body}:undefined;apiCalls.push({route,init:request});
-  if(overrideApi){const result=overrideApi(route,request);if(result!==undefined)return await result;}
+  if(overrideApi){const result=await overrideApi(route,request);if(result!==undefined)return result;}
   const url=new URL(route,'https://fixture.invalid');
   if(url.pathname==='/library/identity')return {ok:true,result:{library_id:identity.library_id}};
   if(url.pathname==='/chat/identity')return {ok:true,result:{...identity,profile}};
@@ -69,7 +69,7 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
  const SDK={React,hooks:React,components:{},fetchJSON:api,buildWsUrl:async()=> 'wss://fixture.invalid/api/ws?ticket=synthetic'};
  const ctx={rest:api,register:entry=>{if(entry.render)page=entry.render;}};
  const scope={React,host,ctx,useValue:atom=>atom?.get?.(),ROUTES_AREA:'routes',SIDEBAR_NAV_AREA:'nav',Button:'button',Input:'input',
-  crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,btoa,Uint8Array,document:dom.window.document,
+  crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,TextEncoder,btoa,Uint8Array,document:dom.window.document,
   window:{__HERMES_PLUGIN_SDK__:SDK,__HERMES_PLUGINS__:{register:(_name,Page)=>{page=()=>React.createElement(Page);}}}};
  let source=fs.readFileSync(target==='desktop'?'desktop/plugin.js':'dashboard/dist/index.js','utf8');
  if(target==='desktop')source=source.replace(/^import .*;\n/gm,'').replace('export default','const plugin=')+'\nplugin.register(ctx);';

@@ -94,14 +94,14 @@ function createBookmarksWorkspace(React,adapter,components,styles){
     useEffect(()=>{if(!opened)return;let active=true;(async()=>{try{const result=await api('/chat/identity');if(!result?.ok||!result.result?.library_id||!result.result.profile)throw Error('Could not resolve the conversation library and profile.');if(active)setIdentity(result.result);}catch{if(active)setError('Chat is unavailable. Enable the native Bookmarks plugin and configure its shared library. Your library remains available.');}})();return()=>{active=false;};},[api,opened]);
     function openChat(){setOpened(true);setTab('chat');}
     function closeChat(){setTab('library');opener.current?.focus();}
-    function ask(item){setSelection(previous=>previous.some(row=>row.id===item.id)?previous:previous.length<20?[...previous,item]:previous);openChat();}
+    function ask(item){const incoming=Array.isArray(item)?item:[item];setSelection(previous=>{const rows=[...previous];for(const row of incoming)if(row?.id&&!rows.some(existing=>existing.id===row.id)&&rows.length<20)rows.push(row);return rows;});openChat();}
     const status=chatState.pending?'Permission or answer needed':chatState.uncertain?'Delivery uncertain':chatState.busy?'Responding':'Chat';
-    return h('div',{className:'hb-workspace','data-view':tab,'data-chat-open':tab==='chat'},h('style',null,styles),
+    return h('div',{className:'hb-workspace-frame'},h('div',{className:'hb-workspace','data-view':tab,'data-chat-open':tab==='chat'},h('style',null,styles),
       h('nav',{className:'hb-workspace-toolbar','aria-label':'Bookmarks views'},
         h('strong',null,'Bookmarks'),h('div',null,
           chatState.busy&&h(Button,{type:'button','aria-label':'Stop conversation',onClick:()=>stop.current?.().catch(()=>{})},'Stop'),
           h(Button,{ref:opener,type:'button','aria-label':'Chat','aria-expanded':tab==='chat',onClick:()=>tab==='chat'?closeChat():openChat()},'Chat',status==='Chat'?'':' · '+status))),
-      h(Library,{ctx,onAsk:ask,onReady:handler=>{refresh.current=handler;}}),
-      opened&&h('div',{className:'hb-chat-shell',hidden:tab!=='chat'},identity?h(ChatPanel,{key:JSON.stringify([scope,identity]),identity,scope,api,selection,visible:tab==='chat',onState:setChatState,onStopReady:handler=>{stop.current=handler;},onClose:closeChat,onRemove:id=>setSelection(current=>current.filter(row=>row.id!==id)),onChange:()=>refresh.current?.()}):h('aside',{className:'hb-chat hb-chat-unavailable'},h('h2',null,'Your library conversation'),h('p',null,error||'Connecting to Hermes…'),h(Button,{type:'button',onClick:closeChat},'Close chat'))));
+      h(Library,{ctx,scope,onAsk:ask,onReady:handler=>{refresh.current=handler;}}),
+      opened&&h('div',{className:'hb-chat-shell',hidden:tab!=='chat'},identity?h(ChatPanel,{key:JSON.stringify([scope,identity]),identity,scope,api,selection,visible:tab==='chat',onState:setChatState,onStopReady:handler=>{stop.current=handler;},onClose:closeChat,onRemove:id=>setSelection(current=>current.filter(row=>row.id!==id)),onChange:()=>refresh.current?.()}):h('aside',{className:'hb-chat hb-chat-unavailable'},h('h2',null,'Your library conversation'),h('p',null,error||'Connecting to Hermes…'),h(Button,{type:'button',onClick:closeChat},'Close chat')))));
   };
 }
