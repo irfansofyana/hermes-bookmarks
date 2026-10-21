@@ -21,7 +21,7 @@ The owner approved subagent-driven execution, then explicitly switched to **hybr
 | 5: jobs/enrichment | `98391e8`, targeted review fixes at `5ea3920`, then actual-host async activation fix in Task 6. Real host consumed an intentionally incomplete job after the initiating request ended; no real model call used. |
 | 6: image/integration | Image slice at `44014f3`; real cold-host auth/image/reopen/native-registry checks and Dashboard visual matrix now exercised. Final whole-branch review consumed; all three Important findings fixed in one RED→GREEN pass. Two UI minors are deferred. M1 remains incomplete because target/model gates are open. |
 
-Chat checkpoint: **86 Python tests passed on CPython 3.14.7; 27 Node tests passed before the additional two restored-model regressions, whose focused six-test UI run now passes**. Whole suites are rerun before completion. Prior committed checkpoint `8f0a2e9`: 82 Python on both 3.14/3.11 and 14 Node, official validation passed. Nonfatal async slow-callback diagnostics are recorded, not hidden. No remote CI or new provider acceptance is claimed.
+Latest verification at `2399edc`: **86 Python tests passed on both CPython 3.14.7 and 3.11.14; 29 Node tests passed**, including six both-emitted-client chat tests. Deterministic build, Desktop syntax and whitespace passed. Official isolated validation returned `ok: true`/host-ready, with two disclosed scanner cautions on bundled Marked code-span regex syntax (not shell execution); see chat verification. Nonfatal async slow-callback diagnostics remain visible. No remote CI or successful provider inference is claimed.
 
 ## Read next
 
@@ -45,7 +45,7 @@ Chat checkpoint: **86 Python tests passed on CPython 3.14.7; 27 Node tests passe
 ## Open acceptance gates
 
 1. Connected actual Desktop plugin proof. The disposable app stayed behind its backend connection overlay. No core workaround or active-app deployment was attempted.
-2. In-plugin chat UI and verified public Hermes-backed execution on both clients. The old native-composer handoff gate is no longer the intended UX; do not waive in-plugin chat just because a handoff works.
+2. Complete actual-target chat acceptance on both clients. The owned UI and both emitted React behaviors now exist; actual Dashboard create/resume/submit/history and four visual cases pass. The credential-free host reports its real missing-provider error. Connected Electron and successful provider execution remain unproven; handoff is not a substitute.
 3. Actual real-model text/vision, trust and routing checks on synthetic content are now approved but unperformed. Earlier incomplete-job probes remain lifecycle evidence, not inference evidence.
 4. Independent-machine/OAuth transport and maximum payload checks through every host proxy. Current real authenticated TCP checks are loopback.
 Code review/fix gates are consumed, not pending. Deferred UI minors: global Retry only reloads rather than resubmitting; narrow layouts hide item status. Both are recorded in `final-review-fixes.md` for the next UI pass, not waived for v1.
