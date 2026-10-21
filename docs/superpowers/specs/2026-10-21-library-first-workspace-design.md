@@ -1,7 +1,7 @@
 # Library-first workspace and organization
 
 Date: 2026-10-21
-Status: In-chat direction approved by the owner; written specification awaiting review. No implementation of this revision is claimed.
+Status: Written specification approved by the owner on 2026-10-21 with “lets implement all”. The detailed implementation plan is prepared for its required review. No implementation of this revision is claimed.
 Baseline inspected: `b6b046dc13a22e3c2f071df13c8b014994edf941`, branch `feat/m1-native-foundation`.
 
 ## 1. Intent and scope
@@ -208,7 +208,7 @@ The selected approach extends the shared service and refactors plugin presentati
 
 Delivery ordering is: workspace/collapse and form shell; organization/persistent metadata; safe notes/association/image-record flows; full interaction and boundary verification. A shell slice must label unavailable fields/actions and cannot be reported as the completed revision. Imports/export and the remaining rich-editor/vision/settings work retain their roadmap milestones.
 
-The next gate is the owner's review of this written specification. After approval, write a detailed test-first implementation plan against the current source and retain hybrid execution unless the owner chooses another method. Do not start product changes merely because the in-chat layout was approved.
+The owner approved this written specification on 2026-10-21. The [test-first implementation plan](../plans/2026-10-21-library-first-workspace.md) preserves the existing hybrid execution method and awaits its required review before product changes. All capabilities in this design remain acceptance targets until implemented and verified.
 
 ## References
 

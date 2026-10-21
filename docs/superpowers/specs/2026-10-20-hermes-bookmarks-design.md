@@ -4,7 +4,7 @@ Date: 2026-10-20
 Status: Product direction and M1 execution approved using subagents on 2026-10-20; Task 1 foundation preview implemented with concerns. Requirements below remain release targets, not completed functionality. See `docs/STATUS.md`.
 Repository: irfansofyana/hermes-bookmarks (public).
 
-Layout refinement (2026-10-21): the owner approved the library-first in-chat design with a collapsible panel, collections/tags and Add/Edit popup. The detailed [workspace design](2026-10-21-library-first-workspace-design.md) awaits written-spec review before implementation planning. It refines the experience below; it does not establish implementation or waive rich-text, vision, import/export or target-acceptance requirements.
+Layout refinement (2026-10-21): the owner approved the written [workspace design](2026-10-21-library-first-workspace-design.md) with a collapsible panel, collections/tags and Add/Edit popup. Its [test-first implementation plan](../plans/2026-10-21-library-first-workspace.md) is ready for required review, retaining hybrid execution. The refinement does not establish implementation or waive rich-text, vision, import/export or target-acceptance requirements.
 
 ## 1. Intent and agreed constraints
 

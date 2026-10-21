@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Library-first UX revision (2026-10-21):** owner approved the in-chat layout: library as the primary view, collapsible chat initially closed, collections/tags sidebar, grid/list browsing and Add/Edit popup with notes/images. The written [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md) is prepared for owner review. This revision brings parts of M2–M4 forward; collections, notes, association/image records and the new layout are not implemented. Written-spec approval precedes detailed planning and product changes. Keep the established hybrid execution method unless the owner changes it.
+**Library-first UX revision (2026-10-21):** owner approved the written [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md) with “lets implement all”. The detailed [implementation plan](superpowers/plans/2026-10-21-library-first-workspace.md) covers the full revision in eight test-first tasks and awaits its required written review. Keep the established hybrid method; no execution-method choice needs reopening. This brings parts of M2–M4 forward, but collections, notes, association/image records and the revised layout are not implemented yet. Fresh planning baseline at `c811880`: 86 Python tests passed on CPython 3.14.7, 41 Node tests passed, deterministic bundle check passed. These are baseline tests, not new-feature evidence.
 
 **In-plugin chat (2026-10-21):** owner approved implementation after the Learning architecture report. Bookmarks now has its own transcript/composer, dedicated Hermes sessions, profile-scoped durable bindings, streaming/activity/plan/decision controls, Stop, history and new-conversation model selection. The native-screen/draft-handoff source and obsolete tests are removed. Focused new tests and both emitted React entrypoints pass; real authenticated binding routes pass. Actual Dashboard conversation/visual checks passed. The targeted review found five Important defects; all were reproduced and fixed in one author-verified RED→GREEN pass. Connected Electron/provider acceptance remains open. See `verification/in-plugin-chat.md`; do not confuse implementation with all-target/provider acceptance.
 
@@ -32,8 +32,8 @@ Latest chat review-fix verification: **86 Python tests passed on both CPython 3.
 1. `AGENTS.md`.
 2. `docs/verification/m1.md`: real topology, checks, versions, four Dashboard screenshots and remaining gates.
 3. `docs/verification/final-review.md` and `final-review-fixes.md`: original independent whole-branch review and the one verified fix pass, remaining minors/rulings. Earlier targeted findings are in `enrichment-review-fixes.md`. Do not redispatch either completed review.
-4. Product spec, the new `superpowers/specs/2026-10-21-library-first-workspace-design.md` awaiting owner review, and `docs/ROADMAP.md` for complete v1 scope.
-5. Active plan: `docs/superpowers/plans/2026-10-20-m1-native-foundation.md`. Local ledger/review artifacts: `.superpowers/sdd/2026-10-20-m1-native-foundation/` (gitignored). Committed verification documents are the portable record; historical documents describe their original snapshots.
+4. Product spec, the approved `superpowers/specs/2026-10-21-library-first-workspace-design.md`, and `docs/ROADMAP.md` for complete v1 scope.
+5. Next implementation plan: `superpowers/plans/2026-10-21-library-first-workspace.md`, pending plan review. The M1 plan and local `.superpowers/sdd/2026-10-20-m1-native-foundation/` ledger remain historical references. Committed verification documents are the portable evidence; old documents describe their original snapshots.
 
 ## Integration rules to preserve
 
@@ -56,7 +56,7 @@ Both review/fix gates are consumed: original M1 and the new targeted chat review
 
 ## Next runnable action
 
-The owner is reviewing the written library-first workspace design. After written-spec approval, write the detailed test-first plan for that revision against the existing source. Preserve hybrid execution, completed chat behavior and all open host/provider acceptance gates. Do not implement based only on the approved in-chat layout or turn an unimplemented sidebar into a capability claim.
+The written library-first design is approved and the detailed plan is ready for required review. After plan approval, execute Task 1's failing collapse/lifecycle tests in the existing worktree, preserving hybrid execution. Do not re-ask specification approval or execution method. No product code in this revision has changed yet; do not treat the new plan or baseline tests as implementation evidence. All prior target/provider acceptance gates remain open.
 
 Draft PR #1 already contains the chat implementation and verified review fixes. Keep it draft while connected Electron and successful provider-response acceptance remain open. Re-read its exact head and CI before future publication; do not recreate the PR or repeat consumed M1/chat reviews. Local historical execution brief: `.superpowers/sdd/2026-10-20-m1-native-foundation/chat-implementation.md`. Synthetic model verification remains separate: the disposable host intentionally has no credentials. Merge/release/live installation remain unauthorized.
 

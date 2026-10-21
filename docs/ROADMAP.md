@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Status: M1 foundation, plugin-owned chat and their review-fix passes are implemented and published in draft PR #1; target acceptance remains partial. M2–M5 remain unimplemented. The owner subsequently approved the library-first layout direction with collapsible chat, collections/tags and Add/Edit popup. Its written [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md) awaits review before detailed planning. It brings organization, notes/image associations and presentation slices forward without claiming the remaining milestones are complete. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
+Status: M1 foundation, plugin-owned chat and their review-fix passes are implemented and published in draft PR #1; target acceptance remains partial. M2–M5 remain unimplemented. The owner approved the written library-first [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md). Its [implementation plan](superpowers/plans/2026-10-21-library-first-workspace.md) is ready for required review, retaining hybrid execution. It brings organization, notes/image associations and presentation slices forward without claiming the remaining milestones are complete. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
 
 ## Delivery approach
 
