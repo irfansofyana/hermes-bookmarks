@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Status: M1 foundation and its code-review fix pass are implemented locally; target acceptance remains partial. On 2026-10-21 the owner corrected the chat direction to a plugin-owned UI, with Hermes execution underneath rather than navigation to the usual session chat. The integration design is being revised before new chat implementation. M2–M5 remain unimplemented. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
+Status: M1 foundation, plugin-owned chat and their review-fix passes are implemented and published in draft PR #1; target acceptance remains partial. M2–M5 remain unimplemented. The owner subsequently approved the library-first layout direction with collapsible chat, collections/tags and Add/Edit popup. Its written [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md) awaits review before detailed planning. It brings organization, notes/image associations and presentation slices forward without claiming the remaining milestones are complete. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
 
 ## Delivery approach
 
@@ -10,7 +10,7 @@ The full product spans several subsystems; do not prewrite hundreds of speculati
 
 ## M1 — Native integration and durable capture
 
-Deliver a valid plugin package, minimal shared library, native save/get/search tools, two UI entrypoints, native Ask Hermes composition/handoff, one durable enrichment path, and one image upload/read path. Start with public-API compatibility evidence. Development stays outside active installation roots.
+Deliver a valid plugin package, minimal shared library, native save/get/search tools, two UI entrypoints, plugin-owned Hermes-backed chat with explicit Ask Hermes context, one durable enrichment path, and one image upload/read path. The older handoff approach is superseded. Start with public-API compatibility evidence. Development stays outside active installation roots.
 
 Exit: both emitted interfaces and native tools exercise the same service. Real-host checks either pass against recorded versions in an approved isolated environment or remain explicit blockers; fixtures alone do not establish compatibility. The native-chat constraint cannot be waived to finish the milestone.
 
@@ -44,7 +44,7 @@ Exit: links and standalone images receive configurable AI tags/summaries; manual
 
 Depends on functioning prior slices; refine shared UI continuously rather than waiting for M4 to begin styling.
 
-Deliver image-led grid/list views, comfortable detail reading, full nested navigation, visible selection/bulk actions, native Ask Hermes context actions, state-preserving native-chat navigation, responsive narrow-screen flows, host theme inheritance, keyboard/touch accessibility, reduced motion, and complete error/empty/pending states.
+Deliver image-led grid/list views, comfortable detail reading, full nested navigation, visible selection/bulk actions, Ask Hermes context actions, state-preserving in-plugin chat collapse/reopen, responsive narrow-screen flows, host theme inheritance, keyboard/touch accessibility, reduced motion, and complete error/empty/pending states. The library-first revision refines these requirements and stages an explicit Markdown-notes editor before the full rich-text editor; the latter remains required in M3.
 
 Provide the plugin-owned chat UI alongside library work, using public presentation primitives where suitable and Hermes-backed execution. Do not replace it with a regular-session handoff. No copied host internals, new agent loop or separate credential form. Verify the backend/session/streaming contract before committing to an adapter. Record differences between Desktop and Dashboard. Chat uses session-scoped identity/model; enrichment uses its library route.
 

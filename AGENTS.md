@@ -7,6 +7,8 @@
 3. `docs/ROADMAP.md` for delivery boundaries.
 4. The active milestone plan linked in STATUS.
 
+The owner-approved library-first in-chat direction is refined in `docs/superpowers/specs/2026-10-21-library-first-workspace-design.md`. Its written-spec review is pending; do not infer implementation approval from the layout discussion. Preserve the library/chat ownership, draft and manual-edit requirements when planning the revision.
+
 Do not infer completed implementation from a plan checkbox, an example response, or this conversation. Check the working tree, remote refs, and actual tests. Preserve uncommitted work.
 
 ## Non-negotiable integration rules
