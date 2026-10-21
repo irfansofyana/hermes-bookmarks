@@ -72,13 +72,14 @@ class JobTests(unittest.TestCase):
         self.assertTrue(q.complete(job,'a',self.result,token=a['token'],now=110))
         self.assertFalse(q.complete(job,'a',self.result,token=a['token'],now=111))
         self.assertEqual(self.service.get(self.item['id'])['revision'],2)
-    def test_manual_edit_revision_is_protected(self):
+    def test_manual_metadata_edit_survives_valid_completion(self):
         self.enqueue(); a=self.q.claim('a',100,30)
-        with self.service._storage._transaction(write=True) as c:
-            c.execute("UPDATE items SET title='Manual', revision=revision+1 WHERE id=?",(self.item['id'],))
-        self.assertFalse(self.q.complete(a['id'],'a',self.result,token=a['token'],now=110))
-        self.assertEqual(self.service.get(self.item['id'])['summary'],'')
-        self.assertEqual(self.service.get(self.item['id'])['title'],'Manual')
+        self.service.update(self.item['id'],1,{'title':'Manual','notes':'Keep'})
+        self.assertTrue(self.q.complete(a['id'],'a',self.result,token=a['token'],now=110))
+        got=self.service.get(self.item['id'])
+        self.assertEqual(got['summary'],'Synthetic summary')
+        self.assertEqual(got['title'],'Manual')
+        self.assertEqual(got['notes'],'Keep')
     def test_cancel_prevents_late_apply(self):
         job=self.enqueue(); a=self.q.claim('a',100,30); self.q.cancel(job)
         self.assertFalse(self.q.complete(job,'a',self.result,token=a['token'],now=110))

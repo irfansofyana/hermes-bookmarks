@@ -128,7 +128,10 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json()['error']['code'], 'not_found')
 
     def test_schema_and_runtime_registration_are_bounded(self):
-        self.assertEqual(set(self.tools), {'bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_get', 'bookmark_search'})
+        self.assertEqual(set(self.tools), {'bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_get', 'bookmark_search',
+            'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
+            'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
+            'bookmark_library_identity', 'bookmark_counts'})
         for tool in self.tools.values():
             self.assertIs(tool['schema']['parameters']['additionalProperties'], False)
         self.assertEqual(self.tools['bookmark_search']['schema']['parameters']['properties']['limit']['maximum'], 100)

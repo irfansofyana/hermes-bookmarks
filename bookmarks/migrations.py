@@ -2,6 +2,7 @@
 from sqlite3 import Connection
 
 from .errors import ConfigurationError
+from .library_schema import upgrade_library
 
 
 MIGRATIONS = (
@@ -59,6 +60,7 @@ MIGRATIONS = (
             UNIQUE(profile,session_id))""",
         "CREATE INDEX chat_threads_profile ON chat_threads(profile,created_at DESC)",
     ),
+    (upgrade_library,),
 )
 
 
@@ -70,6 +72,9 @@ def migrate(connection: Connection) -> None:
     for index in range(version, len(MIGRATIONS)):
         for statement in MIGRATIONS[index]:
             # executescript would implicitly commit and break migration atomicity.
-            connection.execute(statement)
+            if callable(statement):
+                statement(connection)
+            else:
+                connection.execute(statement)
         # The interpolated value is our schema index, never a caller-provided value.
         connection.execute(f"PRAGMA user_version = {index + 1}")

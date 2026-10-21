@@ -9,6 +9,15 @@ class BookmarkError(Exception):
         super().__init__(self.message)
 
 
+class ConflictError(BookmarkError):
+    code = 'conflict'
+    message = 'The saved state changed or the requested organization conflicts. Review it before saving again.'
+
+    def __init__(self, current_revision=None):
+        super().__init__()
+        self.current_revision = current_revision
+
+
 class ConfigurationError(BookmarkError):
     code = "configuration_error"
     message = "An accessible, explicit absolute library root and supported schema are required."

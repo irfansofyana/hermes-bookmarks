@@ -63,7 +63,7 @@ class StorageTests(unittest.TestCase):
         service = BookmarkService(nested)
         self.assertEqual(service.search("")["total"], 0)
         with closing(sqlite3.connect(nested / "bookmarks.sqlite3")) as connection, connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 6)
             self.assertEqual(connection.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
     def test_upgrade_preserves_existing_id_revision_title_and_populates_fts(self):
@@ -80,9 +80,13 @@ class StorageTests(unittest.TestCase):
             "title": "Migrationneedle 東京", "revision": 7, "enrichment_status": "not_started",
             "summary": "", "tags": [], "enrichment_job_id": None,
         }
-        self.assertEqual(service.get("existing-id"), expected)
-        self.assertEqual(service.search("Migrationneedle")["items"], [expected])
-        self.assertEqual(BookmarkService(self.root).search("東京")["items"], [expected])
+        item = service.get("existing-id")
+        self.assertEqual({key: item[key] for key in expected}, expected)
+        self.assertEqual(item['kind'], 'link')
+        self.assertEqual(item['notes'], '')
+        self.assertEqual(item['attachments'], [])
+        self.assertEqual(service.search("Migrationneedle")["items"], [item])
+        self.assertEqual(BookmarkService(self.root).search("東京")["items"], [item])
 
     def test_failed_migration_rolls_back_schema_and_version(self):
         with closing(sqlite3.connect(self.database)) as connection, connection:

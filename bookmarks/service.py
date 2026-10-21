@@ -1,4 +1,4 @@
-"""Shared save/get/search contract, independent of any host/session/worker."""
+"""Public, explicit-root facade shared by native tools and authenticated HTTP."""
 from pathlib import Path
 
 from .errors import ValidationError
@@ -17,9 +17,10 @@ def _validate_text(value: str, *, nonempty=False) -> None:
 class BookmarkService:
     """An explicit installation-owned absolute Path is required.
 
-    Construction creates/migrates only that root. No default is discovered from
-    HOME, Hermes profiles, or the current working directory. Saves are durable
-    but enrichment is not yet run/scheduled: new items say ``not_started``.
+    Construction creates/migrates only that root. Captures are durable without
+    a model. Optional enrichment settings admit link jobs atomically; an empty
+    route is intentionally queued for a configuration-required worker result.
+    Standalone images never enter the URL-extraction queue.
     """
 
     def __init__(self, data_root: Path, *, enrichment_settings=None):
@@ -35,10 +36,58 @@ class BookmarkService:
         _validate_text(item_id, nonempty=True)
         return self._storage.get(item_id)
 
-    def search(self, query: str, limit: int = 50, offset: int = 0) -> dict:
-        _validate_text(query)
-        if type(limit) is not int or not 1 <= limit <= 100:
-            raise ValidationError()
-        if type(offset) is not int or offset < 0:
-            raise ValidationError()
-        return self._storage.search(query.strip(), limit, offset)
+    def capture(self, *, kind='link', url=None, title='', description='', notes='', collection_id=None,
+                tags=(), favorite=False, read_later=False, primary_asset_id=None, attachment_ids=(), operation_key=None):
+        from .items import ItemStore
+        return ItemStore(self._storage).capture(kind=kind, url=url, title=title, description=description, notes=notes,
+            collection_id=collection_id, tags=tags, favorite=favorite, read_later=read_later,
+            primary_asset_id=primary_asset_id, attachment_ids=attachment_ids, operation_key=operation_key,
+            enrichment_settings=self._enrichment_settings)
+
+    def capture_status(self, operation_key):
+        from .items import ItemStore
+        return ItemStore(self._storage).capture_status(operation_key)
+
+    def update(self, item_id, expected_revision, changes):
+        from .items import ItemStore
+        return ItemStore(self._storage).update(item_id, expected_revision, changes)
+
+    def note_update(self, item_id, expected_revision, text, mode='replace'):
+        from .items import ItemStore
+        return ItemStore(self._storage).note_update(item_id, expected_revision, text, mode)
+
+    def identity(self):
+        with self._storage._transaction() as connection:
+            row = connection.execute("SELECT value FROM library_config WHERE key='library_id'").fetchone()
+            return {'library_id': row['value']}
+
+    def search(self, query='', limit=50, offset=0, *, view='all', collection_id=None, tags=()):
+        from .queries import search
+        with self._storage._transaction() as connection:
+            return search(connection, query, limit, offset, view=view, collection_id=collection_id, tags=tags)
+
+    def counts(self):
+        from .queries import counts
+        with self._storage._transaction() as connection:
+            return counts(connection)
+
+    def tag_list(self, query='', limit=50, offset=0):
+        from .queries import tag_list
+        with self._storage._transaction() as connection:
+            return tag_list(connection, query, limit, offset)
+
+    def collection_list(self, limit=50, offset=0, *, parent_id=None, query=''):
+        from .collections import CollectionStore
+        return CollectionStore(self._storage).list(limit, offset, parent_id=parent_id, query=query)
+
+    def collection_create(self, name, parent_id=None):
+        from .collections import CollectionStore
+        return CollectionStore(self._storage).create(name, parent_id)
+
+    def collection_update(self, collection_id, expected_revision, changes):
+        from .collections import CollectionStore
+        return CollectionStore(self._storage).update(collection_id, expected_revision, changes)
+
+    def collection_delete(self, collection_id, expected_revision, contents_policy):
+        from .collections import CollectionStore
+        return CollectionStore(self._storage).delete(collection_id, expected_revision, contents_policy)

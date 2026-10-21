@@ -10,4 +10,14 @@ provides_tools:
   - bookmark_save
   - bookmark_get
   - bookmark_search
+  - bookmark_update
+  - bookmark_note_update
+  - bookmark_capture_status
+  - bookmark_collection_list
+  - bookmark_collection_create
+  - bookmark_collection_update
+  - bookmark_collection_delete
+  - bookmark_tag_list
+  - bookmark_library_identity
+  - bookmark_counts
 provides_hooks: []

@@ -3,73 +3,145 @@ import json
 import asyncio
 import base64
 import binascii
+import re
 
 if __package__:
-    from .bookmarks.errors import BookmarkError, ValidationError
+    from .bookmarks.errors import BookmarkError, ConflictError, ValidationError
     from .runtime import get_service, dispatch, asset_operation, ensure_enrichment
 else:
-    from bookmarks.errors import BookmarkError, ValidationError
+    from bookmarks.errors import BookmarkError, ConflictError, ValidationError
     from runtime import get_service, dispatch, asset_operation, ensure_enrichment
+
+
+def text(length, *, nullable=False, **kwargs):
+    return {'type':['string','null'] if nullable else 'string','maxLength':length,**kwargs}
+
+
+def object_rule(fields):
+    return {'type':'object','properties':fields,'required':[],'additionalProperties':False}
+
+
+ID=text(100)
+COLLECTION=text(100,nullable=True)
+ASSET=text(32,pattern='^[a-f0-9]{32}$')
+OPERATION=text(36,pattern=r'^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')
+TAGS={'type':'array','maxItems':20,'items':text(80)}
+ATTACHMENTS={'type':'array','maxItems':10,'items':ASSET,'uniqueItems':True}
+REVISION={'type':'integer','minimum':1,'maximum':2**63-1}
+PAGING={'limit':{'type':'integer','minimum':1,'maximum':100},'offset':{'type':'integer','minimum':0,'maximum':2**63-1}}
+ITEM_CHANGES={'title':text(1000),'description':text(16384),'notes':text(65536),'collection_id':COLLECTION,
+    'favorite':{'type':'boolean'},'read_later':{'type':'boolean'},'add_tags':TAGS,'remove_tags':TAGS,'attachment_ids':ATTACHMENTS}
+CAPTURE={key:value for key,value in ITEM_CHANGES.items() if key not in {'add_tags','remove_tags'}}
+CAPTURE.update({'kind':{'type':'string','enum':['link','image']},'url':text(8192,nullable=True),
+    'tags':TAGS,'primary_asset_id':text(32,nullable=True,pattern='^[a-f0-9]{32}$'),'operation_key':OPERATION})
 
 SPECS = {
     'bookmark_attachment_add': ('Store user-provided image bytes as an owned attachment; never reads arbitrary local paths or analyzes it with AI.',
-       {'content_base64':{'type':'string','maxLength':((10*1024*1024+2)//3)*4},'mime_type':{'type':'string','maxLength':50}}, ['content_base64','mime_type']),
+        {'content_base64':text(((10*1024*1024+2)//3)*4),'mime_type':text(50)}, ['content_base64','mime_type']),
     'bookmark_attachment_get': ('Read owned attachment metadata by ID. Returned API reference still requires host authentication.',
-       {'asset_id':{'type':'string','maxLength':32}}, ['asset_id']),
-    'bookmark_save': ('Save a URL in the shared bookmark library and queue configured AI enrichment. Page text may be sent to the library model and incur provider charges. Processing status is returned separately.',
-                      {'url': {'type': 'string', 'maxLength': 8192}, 'title': {'type': 'string', 'maxLength': 1000}}, ['url']),
-    'bookmark_get': ('Read a saved bookmark by ID. Does not fetch the page or call a model.',
-                     {'item_id': {'type': 'string', 'maxLength': 100}}, ['item_id']),
-    'bookmark_search': ('Search saved titles and URLs. Empty query lists bookmarks, with pagination.',
-                        {'query': {'type': 'string', 'maxLength': 2000},
-                         'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100},
-                         'offset': {'type': 'integer', 'minimum': 0}}, []),
+        {'asset_id':ASSET}, ['asset_id']),
+    'bookmark_save': ('Save a link or owned image with metadata. Links queue configured enrichment; page text may be sent to the library model and incur charges. Standalone image analysis is not configured. Use an operation key to reconcile uncertain writes.',CAPTURE,[]),
+    'bookmark_get': ('Read full saved detail without fetching a page or calling a model.', {'item_id':ID},['item_id']),
+    'bookmark_search': ('Literal search across saved metadata, notes, summaries and tags. All organization predicates combine with AND.',
+        {'query':text(2000),**PAGING,'view':{'type':'string','enum':['all','inbox','favorites','read_later']},'collection_id':COLLECTION,'tags':TAGS},[]),
+    'bookmark_update': ('Atomically edit saved metadata, notes, tags and image associations at an expected revision. Source is immutable.',
+        {'item_id':ID,'expected_revision':REVISION,'changes':object_rule(ITEM_CHANGES)},['item_id','expected_revision','changes']),
+    'bookmark_note_update': ('Replace or explicitly append personal Markdown notes at an expected revision. Does not regenerate the AI summary.',
+        {'item_id':ID,'expected_revision':REVISION,'text':text(65536),'mode':{'type':'string','enum':['append','replace']}},['item_id','expected_revision','text']),
+    'bookmark_capture_status': ('Read an immutable capture receipt and current saved item by operation key; never retries a write.',
+        {'operation_key':OPERATION},['operation_key']),
+    'bookmark_collection_list': ('Page direct child collections or search the tree with ancestor paths and descendant item counts.',
+        {**PAGING,'parent_id':COLLECTION,'query':text(2000)},[]),
+    'bookmark_collection_create': ('Create a normalized unique collection, optionally under a parent; depth is limited to 16.',
+        {'name':text(100),'parent_id':COLLECTION},['name']),
+    'bookmark_collection_update': ('Rename or move a collection at an expected revision; cycles and sibling collisions are rejected.',
+        {'collection_id':ID,'expected_revision':REVISION,'changes':object_rule({'name':text(100),'parent_id':COLLECTION})},['collection_id','expected_revision','changes']),
+    'bookmark_collection_delete': ('Delete only the named collection; explicitly move items and direct children to its parent or Inbox/root.',
+        {'collection_id':ID,'expected_revision':REVISION,'contents_policy':{'type':'string','enum':['move_to_parent','move_to_inbox']}},['collection_id','expected_revision','contents_policy']),
+    'bookmark_tag_list': ('Page normalized effective tags with whole-library counts; typing a query does not create tags.',
+        {'query':text(2000),**PAGING},[]),
+    'bookmark_library_identity': ('Read the configured shared library identity, independent of chat/profile configuration.',{},[]),
+    'bookmark_counts': ('Read whole-library All, Inbox, Favorites and Read later counts.',{},[]),
 }
+
+
+def validate(value, rule):
+    kind=rule['type']
+    if isinstance(kind,list):
+        if value is None and 'null' in kind:
+            return
+        kind=next((option for option in kind if option!='null'),None)
+    types={'string':str,'integer':int,'boolean':bool,'array':list,'object':dict}
+    if kind not in types or type(value) is not types[kind]:
+        raise ValidationError()
+    if 'enum' in rule and value not in rule['enum']:
+        raise ValidationError()
+    if kind=='string':
+        if ('maxLength' in rule and len(value)>rule['maxLength']) or ('pattern' in rule and re.fullmatch(rule['pattern'],value) is None):
+            raise ValidationError()
+        if '\x00' in value or any('\ud800'<=character<='\udfff' for character in value):
+            raise ValidationError()
+    elif kind=='integer':
+        if not rule.get('minimum',0)<=value<=rule.get('maximum',2**63-1):
+            raise ValidationError()
+    elif kind=='array':
+        if len(value)>rule['maxItems']:
+            raise ValidationError()
+        for item in value:
+            validate(item,rule['items'])
+        if rule.get('uniqueItems') and len(set(value))!=len(value):
+            raise ValidationError()
+    elif kind=='object':
+        if set(value)-set(rule['properties']) or set(rule.get('required',[]))-set(value):
+            raise ValidationError()
+        for key,item in value.items():
+            validate(item,rule['properties'][key])
 
 
 def execute(name, params, service_factory=get_service):
     try:
-        if name not in SPECS or not isinstance(params, dict):
+        if not isinstance(name,str) or name not in SPECS:
             raise ValidationError()
-        fields, required = SPECS[name][1:]
-        if set(params) - set(fields) or set(required) - set(params):
-            raise ValidationError()
-        for key, value in params.items():
-            rule = fields[key]
-            kind = str if rule['type'] == 'string' else int
-            if type(value) is not kind:
-                raise ValidationError()
-            if kind is str and len(value) > rule['maxLength']:
-                raise ValidationError()
-            if kind is int and (value < rule.get('minimum', 0) or value > rule.get('maximum', 2**63 - 1)):
-                raise ValidationError()
+        fields,required=SPECS[name][1:]
+        validate(params,{'type':'object','properties':fields,'required':required,'additionalProperties':False})
         if name == 'bookmark_attachment_add':
-            try: content = base64.b64decode(params['content_base64'], validate=True)
+            try: content=base64.b64decode(params['content_base64'],validate=True)
             except (ValueError,binascii.Error): raise ValidationError() from None
             return asset_operation('store_image',content,params['mime_type'])
         if name == 'bookmark_attachment_get':
-            payload = asset_operation('get_asset',params['asset_id'])
-            if payload['ok']: payload['result']['access_ref'] = '/api/plugins/hermes-bookmarks/assets/' + params['asset_id']
+            payload=asset_operation('get_asset',params['asset_id'])
+            if payload['ok']: payload['result']['access_ref']='/api/plugins/hermes-bookmarks/assets/'+params['asset_id']
             return payload
-        service = service_factory()
+        service=service_factory()
         if name == 'bookmark_save':
-            result = service.save_link(**params)
-        elif name == 'bookmark_get':
-            result = service.get(**params)
-        else:
-            result = service.search(**{'query': '', **params})
-        return {'ok': True, 'result': result}
+            saved=service.capture(**params)
+            payload={'ok':True,'result':saved['item']}
+            if saved['receipt'] is not None:
+                payload['receipt']=saved['receipt']
+            return payload
+        operations={
+            'bookmark_get':service.get, 'bookmark_search':service.search,
+            'bookmark_update':service.update, 'bookmark_note_update':service.note_update,
+            'bookmark_capture_status':service.capture_status,
+            'bookmark_collection_list':service.collection_list, 'bookmark_collection_create':service.collection_create,
+            'bookmark_collection_update':service.collection_update, 'bookmark_collection_delete':service.collection_delete,
+            'bookmark_tag_list':service.tag_list, 'bookmark_library_identity':service.identity, 'bookmark_counts':service.counts,
+        }
+        return {'ok':True,'result':operations[name](**params)}
     except BookmarkError as exc:
-        return {'ok': False, 'error': {'code': exc.code, 'message': exc.message}}
+        error={'code':exc.code,'message':exc.message}
+        if isinstance(exc,ConflictError) and type(exc.current_revision) is int and 1<=exc.current_revision<=2**63-1:
+            error['current_revision']=exc.current_revision
+        return {'ok':False,'error':error}
 
 
 def register_tools(ctx):
-    for name, (description, fields, required) in SPECS.items():
-        async def handler(params, _name=name, **kwargs):
-            if _name == 'bookmark_save': ensure_enrichment()
+    for name,(description,fields,required) in SPECS.items():
+        async def handler(params,_name=name,**kwargs):
+            if _name=='bookmark_save': ensure_enrichment()
             result=await asyncio.to_thread(dispatch,_name,params)
-            return json.dumps(result, ensure_ascii=False)
-        ctx.register_tool(name=name, toolset='hermes_bookmarks',
-                          schema={'name': name, 'description': description, 'parameters': {
-                              'type': 'object', 'properties': fields, 'required': required, 'additionalProperties': False}},
-                          handler=handler, is_async=True)
+            return json.dumps(result,ensure_ascii=False)
+        ctx.register_tool(name=name,toolset='hermes_bookmarks',
+            schema={'name':name,'description':description,'parameters':{
+                'type':'object','properties':fields,'required':required,'additionalProperties':False}},
+            handler=handler,is_async=True)
