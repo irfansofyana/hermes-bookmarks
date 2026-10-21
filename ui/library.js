@@ -1,6 +1,6 @@
 function createLibrary(React,adapter,components,styles){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
- const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components),Dialog=createLibraryDialog(React,components);
+ const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components);
  const defaults=()=>({query:'',view:'all',collectionId:null,tags:[],limit:50,offset:0,mode:'grid',selectedIds:[],scroll:0});
  return function Bookmarks({ctx,scope='dashboard',onAsk,onReady}={}){
   const [libraryId,setLibraryId]=useState(null),[query,setQuery]=useState(defaults),[page,setPage]=useState({items:[],total:0}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -41,14 +41,14 @@ function createLibrary(React,adapter,components,styles){
   function saved(result){setForm(null);setNotice(result.receipt?.outcome==='duplicate'?'Already saved. Your staged fields were not applied.':'Saved to your library.');refresh();if(result.reopenEdit)setForm({item:result.item});else if(result.openExisting)setDetail(result.item.id);}
   function askSelection(){const items=query.selectedIds.map(id=>selectedItems.current.get(id)||{id,title:id});onAsk?.(items.slice(0,20));if(items.length>20)setNotice('Only the first 20 selected references were prepared. Nothing was sent.');}
   const heading=query.collectionId?'Collection · includes descendants':({all:'All items',inbox:'Inbox',favorites:'Favorites',read_later:'Read later'})[query.view];
-  const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision};
+  const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision,narrow,drawer,onDrawerClose:()=>setDrawer(false)};
   return h('section',{ref:libraryRoot,className:'hb-library','aria-label':'Bookmarks'},
    h('div',{className:'hb-library-topbar'},h(Button,{type:'button','aria-label':'Toggle library navigation','aria-expanded':drawer,onClick:()=>setDrawer(open=>!open)},'☰'),
     h('form',{className:'hb-search',onSubmit:event=>{event.preventDefault();change({query:search});}},h(Input,{type:'search',name:'query','aria-label':'Search bookmarks',value:search,placeholder:'Search your library…',onChange:event=>setSearch(event.target.value),onInput:event=>setSearch(event.currentTarget.value)}),h(Button,{type:'submit'},'Search')),
     h(Button,{type:'button',className:'hb-primary',disabled:!libraryId,onClick:()=>{setDetail(null);setForm({item:null});}},'Add')),
    error&&h('div',{role:'alert',className:'hb-error'},error,h(Button,{type:'button',onClick:refresh},'Retry library')),
    notice&&h('p',{role:'status',className:'hb-notice'},notice),
-   h('div',{className:'hb-library-layout','data-navigation-open':drawer},libraryId&&!narrow&&h(Navigation,navigationProps),
+   h('div',{className:'hb-library-layout','data-navigation-open':drawer},libraryId&&h(Navigation,navigationProps),
     h('main',{className:'hb-library-content',ref:surface,onScroll:event=>{query.scroll=event.currentTarget.scrollTop;}},
      h('div',{className:'hb-library-heading'},h('div',null,h('h1',null,heading),h('p',{className:'hb-muted',role:'status'},loading?'Loading library…':page.total+' saved items')),
       h('div',{className:'hb-view-mode'},h(Button,{type:'button','aria-label':'Grid view','aria-pressed':query.mode==='grid',onClick:()=>setQuery(previous=>({...previous,mode:'grid'}))},'Grid'),h(Button,{type:'button','aria-label':'List view','aria-pressed':query.mode==='list',onClick:()=>setQuery(previous=>({...previous,mode:'list'}))},'List'))),
@@ -57,7 +57,7 @@ function createLibrary(React,adapter,components,styles){
      query.collectionId&&page.items.length>0&&h(Button,{type:'button',onClick:()=>{onAsk?.(page.items.slice(0,20));setNotice('Prepared up to 20 visible item references. Nothing was sent.');}},'Ask about this collection'),
      !loading&&!page.items.length&&h('div',{className:'hb-empty'},h('h2',null,query.query||query.tags.length?'No matching items':'Nothing here yet'),h('p',null,'Save something worth keeping, or try a different filter.')),
      h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
-   libraryId&&narrow&&drawer&&h(Dialog,{title:'Library navigation',description:'Choose a collection, tag or saved view.',onCloseRequest:()=>setDrawer(false)},h('div',{className:'hb-nav-shell'},h(Navigation,navigationProps)),h(Button,{type:'button',onClick:()=>setDrawer(false)},'Close navigation')),
+
    form&&h(Form,{key:form.item?JSON.stringify([form.item.id,form.item.revision]):'new',ctx,scope,libraryId,item:form.item,defaultCollection:query.collectionId,onSaved:saved,onClose:()=>setForm(null)}),
    detail&&!form&&h(Detail,{key:detail,ctx,scope,libraryId,itemId:detail,onEdit:item=>{setDetail(null);setForm({item});},onAsk,onClose:()=>setDetail(null)}));
  };

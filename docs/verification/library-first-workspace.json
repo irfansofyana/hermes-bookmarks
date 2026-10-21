@@ -201,9 +201,21 @@
         "ok": true
       },
       {
+        "check": "real_sdk_400_and_receipt_404_with_explicit_transport_fault",
+        "ok": true
+      },
+      {
+        "check": "actual_collection_draft_survives_resize_and_saves",
+        "ok": true
+      },
+      {
+        "check": "real_sdk_409_explicit_compare_rebase_and_comma_tag_preservation",
+        "ok": true
+      },
+      {
         "check": "actual_form_capture_upload_edit_authenticated_readback",
         "ok": true,
-        "item_id": "add2f0a5-999b-4baa-b5a5-e16c9878de44"
+        "item_id": "f26c135d-d968-48bc-aa2c-ffcdee6e5891"
       },
       {
         "check": "visual",
@@ -311,5 +323,152 @@
   "provider_inference": false,
   "connected_electron_verified": false,
   "oauth_independent_machine_verified": false,
-  "review_status": "boundary FAIL on reviewed snapshot; B1 author fix verified; final revision pending"
+  "review_status": "Original boundary FAIL and final quality/security FAIL/spec NOT SATISFIED preserved; B1 and six Important final findings author-verified, no independent reapproval",
+  "post_review_author_verification": {
+    "reviewed_head": "d26a7bbe8e09545336ab938f34ed0c3ce2e2e1c3",
+    "fix_base": "9850b4eecbb4c0351a4ee3abb259ef2277c71cd7",
+    "original_final_review_sha256": "eb428da2602c077451ffbcf16f6c5b8555e7c9f0af7ea4840e992df8e35f2fa4",
+    "baseline_counterproof": {
+      "baseline": "9850b4eecbb4c0351a4ee3abb259ef2277c71cd7",
+      "exit_code": 1,
+      "counts": {
+        "tests": 14,
+        "pass": 0,
+        "fail": 14,
+        "skipped": 0
+      },
+      "cases": [
+        "desktop: I1 SDK-shaped validation and receipt 404 retain domain semantics",
+        "desktop: I2 untouched comma and quoted Unicode tags never become manual replacements",
+        "desktop: I4 conflict comparison preserves local work and explicitly rebases onto reviewed revision",
+        "desktop: I5 resize preserves collection editor and pending completion ownership",
+        "desktop: I6 tags refresh replaces paginated rows and refreshes earlier counts",
+        "desktop: I6 collections refresh replaces paginated rows and refreshes earlier counts",
+        "dashboard: I1 SDK-shaped validation and receipt 404 retain domain semantics",
+        "dashboard: I2 untouched comma and quoted Unicode tags never become manual replacements",
+        "dashboard: I4 conflict comparison preserves local work and explicitly rebases onto reviewed revision",
+        "dashboard: I5 resize preserves collection editor and pending completion ownership",
+        "dashboard: I6 tags refresh replaces paginated rows and refreshes earlier counts",
+        "dashboard: I6 collections refresh replaces paginated rows and refreshes earlier counts",
+        "Desktop: I3 same-library profile ABA delivers an accepted save to the remounted owner",
+        "Desktop: I3 upload acknowledgement updates only its originating undiscarded library draft after profile remount"
+      ]
+    },
+    "stable_gate": {
+      "fingerprint_before": "5e67cfa4e4f1e3ac71e71145686d578d6dac35a81a3383106b907e9601b6d2f7",
+      "fingerprint_after": "5e67cfa4e4f1e3ac71e71145686d578d6dac35a81a3383106b907e9601b6d2f7",
+      "all_passed": true,
+      "checks": [
+        {
+          "check": "python314",
+          "exit_code": 0,
+          "stable": true,
+          "tests": 147
+        },
+        {
+          "check": "python311",
+          "exit_code": 0,
+          "stable": true,
+          "tests": 147
+        },
+        {
+          "check": "node",
+          "exit_code": 0,
+          "stable": true,
+          "tests": 100
+        },
+        {
+          "check": "build",
+          "exit_code": 0,
+          "stable": true,
+          "tests": null
+        },
+        {
+          "check": "syntax",
+          "exit_code": 0,
+          "stable": true,
+          "tests": null
+        },
+        {
+          "check": "diff",
+          "exit_code": 0,
+          "stable": true,
+          "tests": null
+        }
+      ]
+    },
+    "fixed_important_findings": [
+      "I1",
+      "I2",
+      "I3",
+      "I4",
+      "I5",
+      "I6"
+    ],
+    "deferred_minors": [
+      "M1: no View item notice action outside current filter",
+      "M2: original-baseline range whitespace check still reports chat.css blank EOF",
+      "Author formatting note: the preserved original final report has an intentional Markdown hard-break pair of trailing spaces at line3; staged/range whitespace checks flag it. Original bytes/checksum take precedence over cosmetic reformatting; no runtime effect is attributed."
+    ],
+    "provider_inference": false,
+    "independent_reapproval": false
+  },
+  "post_review_owned_restart": {
+    "ok": true,
+    "synthetic_writes": false,
+    "checks": [
+      {
+        "name": "none GET denied",
+        "ok": true
+      },
+      {
+        "name": "none POST denied",
+        "ok": true
+      },
+      {
+        "name": "invalid GET denied",
+        "ok": true
+      },
+      {
+        "name": "invalid POST denied",
+        "ok": true
+      },
+      {
+        "name": "GET /library/identity",
+        "ok": true
+      },
+      {
+        "name": "library identity",
+        "ok": true
+      },
+      {
+        "name": "GET /captures/7916997f-9805-4b62-9ee0-a0696677555f",
+        "ok": true
+      },
+      {
+        "name": "receipt preserves accepted identity",
+        "ok": true
+      },
+      {
+        "name": "GET /items/b8c14188-56ee-4571-bb9d-4721bebfaf13",
+        "ok": true
+      },
+      {
+        "name": "readback preserves edited note and owned association",
+        "ok": true
+      },
+      {
+        "name": "GET /assets/40c3ecd72743486cb06fc201482bd12b/preview",
+        "ok": true
+      },
+      {
+        "name": "authenticated preview",
+        "ok": true
+      }
+    ],
+    "library_id": "0934b83466cd2bb2d35e4129c476c697",
+    "item_id": "b8c14188-56ee-4571-bb9d-4721bebfaf13",
+    "operation_key": "7916997f-9805-4b62-9ee0-a0696677555f",
+    "asset_id": "40c3ecd72743486cb06fc201482bd12b"
+  }
 }

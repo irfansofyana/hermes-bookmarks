@@ -1,28 +1,38 @@
 function createLibraryForm(React,adapter,components){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
  const Dialog=createLibraryDialog(React,components),AssetImage=createBookmarkAssetImage(React,adapter);
- const tagsOf=value=>[...new Set(value.split(',').map(tag=>tag.trim()).filter(Boolean))];
+ const formatTags=tags=>tags.map(tag=>/[",\r\n]/.test(tag)?'"'+tag.replaceAll('"','""')+'"':tag).join(', ');
+ function tagsOf(value,strict=false){
+  const tags=[];let label='',quoted=false;
+  for(let i=0;i<value.length;i++){const char=value[i];if(char==='"'){if(quoted&&value[i+1]==='"'){label+='"';i++;}else quoted=!quoted;}else if(char===','&&!quoted){if(label.trim())tags.push(label.trim());label='';}else label+=char;}
+  if(quoted&&strict)throw Object.assign(Error('Close the quoted tag before saving.'),{code:'invalid_argument'});
+  if(label.trim())tags.push(label.trim());return [...new Set(tags)];
+ }
+ const valueOf=(item,defaultCollection)=>({kind:item?.kind||'link',url:item?.url||'',title:item?.title||'',description:item?.description||'',notes:item?.notes||'',collection_id:item?.collection_id||defaultCollection||null,tags:formatTags(item?.tags||[]),favorite:!!item?.favorite,read_later:!!item?.read_later,primary_asset_id:item?.primary_asset_id||null,attachment_ids:(item?.attachments||[]).filter(asset=>asset.role!=='primary').map(asset=>asset.asset_id)});
  return function LibraryForm({ctx,scope,libraryId,item,defaultCollection,onSaved,onClose}){
   const storeKey=bookmarkLibraryKey(scope,libraryId)+'/'+(item?.id||'new');
   if(!bookmarkLibraryDrafts.has(storeKey)){
-   const value={kind:item?.kind||'link',url:item?.url||'',title:item?.title||'',description:item?.description||'',notes:item?.notes||'',collection_id:item?.collection_id||defaultCollection||null,tags:(item?.tags||[]).join(', '),favorite:!!item?.favorite,read_later:!!item?.read_later,primary_asset_id:item?.primary_asset_id||null,attachment_ids:(item?.attachments||[]).filter(asset=>asset.role!=='primary').map(asset=>asset.asset_id)};
-   bookmarkLibraryDrafts.set(storeKey,{id:crypto.randomUUID(),key:crypto.randomUUID(),value,initial:JSON.stringify(value),original:item,phase:'editing',error:'',uploads:0});
+   const value=valueOf(item,defaultCollection);
+   bookmarkLibraryDrafts.set(storeKey,{id:crypto.randomUUID(),key:crypto.randomUUID(),value,initial:JSON.stringify(value),original:item,phase:'editing',error:'',uploads:0,listeners:new Set()});
   }
   const draft=useRef(bookmarkLibraryDrafts.get(storeKey)).current,value=draft.value,live=useRef(true);
   const [,paint]=useState(0),[confirm,setConfirm]=useState(false),[preview,setPreview]=useState(false);
   const [collectionQuery,setCollectionQuery]=useState(''),[collectionOffset,setCollectionOffset]=useState(0),[collections,setCollections]=useState([]),[collectionTotal,setCollectionTotal]=useState(0);
-  function changed(){if(live.current)paint(n=>n+1);}
+  function changed(){bookmarkDraftChanged(draft);}
   function field(name,next){value[name]=next;draft.error='';changed();}
-  const api=(route,init)=>bookmarkRequest(adapter,ctx,scope,route,init);
-  useEffect(()=>{live.current=true;return()=>{live.current=false;};},[]);
+  const api=(route,init)=>bookmarkOwnedRequest(adapter,ctx,scope,route,init);
+  useEffect(()=>{live.current=true;const publish=()=>{
+   if(!live.current||(adapter.currentScope&&adapter.currentScope()!==scope))return;
+   if(draft.phase==='saved'&&!draft.delivered){draft.delivered=true;if(bookmarkLibraryDrafts.get(storeKey)===draft)bookmarkLibraryDrafts.delete(storeKey);onSaved({item:draft.saved,receipt:draft.receipt});}
+   else paint(n=>n+1);
+  };draft.listeners.add(publish);if(draft.phase==='saved')publish();return()=>{live.current=false;draft.listeners.delete(publish);};},[]);
   useEffect(()=>{let active=true;api('/collections?limit=50&offset='+collectionOffset+'&query='+encodeURIComponent(collectionQuery)).then(payload=>{if(active){setCollections(previous=>collectionOffset?[...previous,...payload.result.collections]:payload.result.collections);setCollectionTotal(payload.result.total);}}).catch(()=>{});return()=>{active=false;};},[collectionQuery,collectionOffset]);
   function discard(){draft.discarded=true;bookmarkLibraryDrafts.delete(storeKey);onClose();}
   function close(){if(draft.phase==='saving'){draft.error='Saving is still in progress. Keep this form open until the outcome is known.';changed();return;}if(JSON.stringify(value)!==draft.initial||draft.phase==='uncertain'||draft.uploads>0)setConfirm(true);else onClose();}
   function finish(payload){
    const record=payload.item||payload.result,receipt=payload.receipt;
    if(receipt?.outcome==='duplicate'){draft.phase='duplicate';draft.saved=record;draft.receipt=receipt;draft.error='This URL is already saved. Your staged fields have not overwritten it.';changed();return;}
-   draft.phase='saved';draft.saved=record;draft.receipt=receipt;bookmarkLibraryDrafts.delete(storeKey);
-   if(live.current)onSaved({item:record,receipt});
+   draft.phase='saved';draft.saved=record;draft.receipt=receipt;changed();
   }
   async function verify(){
    if(draft.phase==='saving')return;draft.phase='saving';changed();
@@ -43,11 +53,11 @@ function createLibraryForm(React,adapter,components){
    catch(error){draft.phase=error.code==='not_found'?'retry':'uncertain';draft.error=error.code==='not_found'?'No saved operation was found. You may retry the original save explicitly.':'Could not verify the previous save. Your input is preserved.';changed();}
   }
   async function save(event){
-   event.preventDefault();if(['saving','uncertain','duplicate'].includes(draft.phase)||draft.uploads)return;
+   event.preventDefault();if(['saving','uncertain','duplicate','conflict'].includes(draft.phase)||draft.uploads)return;
    draft.phase='saving';draft.error='';changed();
    try{
     if(new TextEncoder().encode(value.notes).length>65536||new TextEncoder().encode(value.description).length>16384)throw Object.assign(Error('Notes or description exceed their text limit.'),{code:'invalid_argument'});
-    const tags=tagsOf(value.tags);
+    const tags=item&&value.tags===JSON.parse(draft.initial).tags?[...(draft.original.tags||[])]:tagsOf(value.tags,true);
     if(item){
      const original=draft.original,oldTags=original.tags||[],changes={};
      for(const name of ['title','description','notes','collection_id','favorite','read_later'])if(value[name]!==JSON.parse(draft.initial)[name])changes[name]=value[name];
@@ -66,7 +76,7 @@ function createLibraryForm(React,adapter,components){
      const payload=await api('/items',{method:'POST',body:draft.submission});finish({item:payload.result,receipt:payload.receipt});
     }
    }catch(error){
-    const known=['invalid_argument','invalid_url','not_found','conflict','configuration_error','scope_changed'].includes(error.code);
+    const known=['invalid_argument','invalid_url','not_found','conflict','configuration_error'].includes(error.code)||(error.code==='scope_changed'&&error.dispatched===false);
     draft.phase=error.code==='conflict'?'conflict':known?'editing':'uncertain';draft.error=known?error.message:'Save outcome is uncertain. Verify save before submitting again. Your draft is preserved.';
     if(known&&!item)draft.submission=null;
     if(known&&item)draft.editSubmission=null;
@@ -76,6 +86,20 @@ function createLibraryForm(React,adapter,components){
   async function reload(){
    try{const payload=await api('/items/'+encodeURIComponent(item.id));if(!live.current)return;draft.discarded=true;bookmarkLibraryDrafts.delete(storeKey);onSaved({item:payload.result,reopenEdit:true});}
    catch(error){draft.error=error.message;changed();}
+  }
+  async function compare(){
+   if(draft.comparing)return;draft.comparing=true;changed();
+   try{const payload=await api('/items/'+encodeURIComponent(item.id));draft.review=payload.result;}
+   catch(error){draft.error=error.message;}finally{draft.comparing=false;changed();}
+  }
+  function adoptReviewed(){
+   try{
+   const record=draft.review;if(!record||draft.phase!=='conflict')return;
+   const before=JSON.parse(draft.initial),base=valueOf(record,null),local={};
+   for(const name of Object.keys(base))if(JSON.stringify(value[name])!==JSON.stringify(before[name]))local[name]=value[name];
+   if(Object.hasOwn(local,'tags')){const previous=draft.original.tags||[],desired=tagsOf(local.tags,true),removed=previous.filter(tag=>!desired.includes(tag)),added=desired.filter(tag=>!previous.includes(tag));local.tags=formatTags([...new Set([...(record.tags||[]).filter(tag=>!removed.includes(tag)),...added])]);}
+   Object.assign(value,base,local);draft.initial=JSON.stringify(base);draft.original=record;draft.review=null;draft.editSubmission=null;draft.phase='editing';draft.error='Reviewed revision selected. Save explicitly to apply your local changes.';changed();
+   }catch(error){draft.error=error.message;changed();}
   }
   async function upload(event,primary){
    const files=[...(event.currentTarget.files||[])];if(!files.length||draft.uploads)return;
@@ -98,15 +122,15 @@ function createLibraryForm(React,adapter,components){
     value.kind==='link'?input('Bookmark URL','url',{type:'url',required:true,maxLength:8192,readOnly:!!item,placeholder:'https://…'}):h('label',{className:'hb-field'},'Primary image',!item&&h('input',{type:'file','aria-label':'Primary image',accept:'image/png,image/jpeg,image/webp',disabled:busy||locked||!!draft.uploads,onChange:event=>upload(event,true)}),value.primary_asset_id&&h(AssetImage,{ctx,scope,assetId:value.primary_asset_id,alt:'Primary saved image'})),
     input('Title','title',{maxLength:1000,placeholder:'Optional title'}),
     h('div',{className:'hb-field'},h('label',null,'Collection search',h(Input,{'aria-label':'Collection search',value:collectionQuery,onChange:event=>{setCollectionOffset(0);setCollectionQuery(event.target.value);}})),h('label',null,'Collection',h('select',{'aria-label':'Collection',value:value.collection_id||'',disabled:busy||locked,onChange:event=>field('collection_id',event.target.value||null)},h('option',{value:''},'Inbox'),!selected&&value.collection_id&&h('option',{value:value.collection_id},'Current collection'),collections.map(row=>h('option',{key:row.id,value:row.id},(row.path||[{name:row.name}]).map(part=>part.name).join(' / '))))),collections.length<collectionTotal&&h(Button,{type:'button',onClick:()=>setCollectionOffset(collections.length)},'More collections')),
-    h('details',{className:'hb-form-section',open:!!value.tags},h('summary',null,'Tags',value.tags?' · '+tagsOf(value.tags).length:''),input('Tags','tags',{placeholder:'Comma-separated tags'}),item?.tag_details?.some(tag=>tag.source==='generated')&&h('p',{className:'hb-muted'},'Existing AI tags stay generated unless you change them.')),
+    h('details',{className:'hb-form-section',open:!!value.tags},h('summary',null,'Tags',value.tags?' · '+tagsOf(value.tags).length:''),h('label',{className:'hb-field'},'Tags',h('textarea',{'aria-label':'Tags',rows:2,value:value.tags,disabled:busy||locked,placeholder:'Comma-separated; quote tags containing commas',onInput:event=>field('tags',event.currentTarget.value),onChange:event=>field('tags',event.target.value)})),h('p',{className:'hb-muted'},'Use double quotes around a tag containing a comma; double a quote inside a quoted tag.'),item?.tag_details?.some(tag=>tag.source==='generated')&&h('p',{className:'hb-muted'},'Existing AI tags stay generated unless you change them.')),
     h('details',{className:'hb-form-section',open:!!value.notes},h('summary',null,'Notes',value.notes?' · has content':''),h('label',{className:'hb-field'},'Personal notes',h('textarea',{'aria-label':'Personal notes',value:value.notes,rows:8,disabled:busy||locked,onInput:event=>field('notes',event.currentTarget.value),onChange:event=>field('notes',event.target.value)})),h(Button,{type:'button',onClick:()=>setPreview(current=>!current)},preview?'Hide note preview':'Preview notes'),preview&&bookmarkMarkdown(React,value.notes)),
     h('details',{className:'hb-form-section',open:!!value.description},h('summary',null,'Description'),h('label',{className:'hb-field'},'Description',h('textarea',{'aria-label':'Description',value:value.description,rows:3,disabled:busy||locked,onChange:event=>field('description',event.target.value),onInput:event=>field('description',event.currentTarget.value)}))),
     h('details',{className:'hb-form-section',open:value.attachment_ids.length>0},h('summary',null,'Image attachments · '+value.attachment_ids.length),h('input',{type:'file',multiple:true,'aria-label':'Attachment images',accept:'image/png,image/jpeg,image/webp',disabled:busy||locked||!!draft.uploads,onChange:event=>upload(event,false)}),h('div',{className:'hb-attachments'},value.attachment_ids.map(assetId=>h('div',{key:assetId,'data-asset-id':assetId},h(AssetImage,{ctx,scope,assetId,alt:'Attached image'}),h(Button,{type:'button',disabled:busy||locked,onClick:()=>field('attachment_ids',value.attachment_ids.filter(id=>id!==assetId))},'Remove image'))))),
     h('div',{className:'hb-flags'},['favorite','read_later'].map(name=>h('label',{key:name},h('input',{type:'checkbox','aria-label':name==='favorite'?'Favorite':'Read later',checked:value[name],disabled:busy||locked,onChange:event=>field(name,event.target.checked)}),name==='favorite'?'Favorite':'Read later'))),
     draft.uploads>0&&h('p',{role:'status'},'Uploading images…'),draft.error&&h('div',{role:'alert',className:'hb-error'},draft.error),
-    draft.phase==='conflict'&&h('div',null,h('p',null,'A newer version exists. Reload saved discards your local changes only after confirmation.'),h(Button,{type:'button',onClick:()=>{if(draft.reloadConfirm)reload();else{draft.reloadConfirm=true;changed();}}},draft.reloadConfirm?'Confirm reload saved':'Reload saved'),h(Button,{type:'button',onClick:()=>{draft.phase='editing';changed();}},'Keep editing')),
+    draft.phase==='conflict'&&h('div',null,h('p',null,'A newer version exists. Keep editing compares the saved version while preserving your local fields. Reload saved discards them only after confirmation.'),h(Button,{type:'button',onClick:()=>{if(draft.reloadConfirm)reload();else{draft.reloadConfirm=true;changed();}}},draft.reloadConfirm?'Confirm reload saved':'Reload saved'),h(Button,{type:'button',disabled:!!draft.comparing,onClick:compare},draft.comparing?'Comparing…':'Keep editing'),draft.review&&h('section',{'aria-label':'Saved version comparison'},h('h3',null,'Saved revision '+draft.review.revision),h('pre',null,JSON.stringify({title:draft.review.title,description:draft.review.description,notes:draft.review.notes,tags:draft.review.tags,collection_id:draft.review.collection_id,favorite:draft.review.favorite,read_later:draft.review.read_later},null,2)),h('p',null,'Your edited fields remain above. Unedited fields adopt this saved version only after confirmation; Save still checks its revision.'),h(Button,{type:'button',onClick:adoptReviewed},'Use reviewed revision'))),
     draft.phase==='duplicate'&&h(Button,{type:'button',onClick:()=>onSaved({item:draft.saved,receipt:draft.receipt,openExisting:true})},'Open existing'),
     h('p',{className:'hb-muted'},value.kind==='link'?'Saving queues configured page enrichment; provider charges and retries may apply.':'The image is stored as a library item. Visual AI analysis is not available in this preview.'),
-    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:close},'Cancel'),draft.phase==='uncertain'?h(Button,{type:'button',onClick:verify},'Verify save'):h(Button,{type:'submit',disabled:busy||['uncertain','duplicate'].includes(draft.phase)||draft.uploads>0||(value.kind==='image'&&!value.primary_asset_id)},busy?'Saving…':draft.phase==='retry'?'Retry original save':'Save'))));
+    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:close},'Cancel'),draft.phase==='uncertain'?h(Button,{type:'button',onClick:verify},'Verify save'):h(Button,{type:'submit',disabled:busy||['uncertain','duplicate','conflict'].includes(draft.phase)||draft.uploads>0||(value.kind==='image'&&!value.primary_asset_id)},busy?'Saving…':draft.phase==='retry'?'Retry original save':'Save'))));
  };
 }

@@ -13,6 +13,8 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};
  const {createRoot}=require('react-dom/client');
+ const resizeObservers=new Set();
+ class ResizeObserver{constructor(callback){this.callback=callback;}observe(){resizeObservers.add(this);}disconnect(){resizeObservers.delete(this);}}
  let page,running=false,reads=0,navigations=0,profile='work',connection='fixture-backend';
  const callbacks=new Set(),calls=[],apiCalls=[],bindings=[...saved],sockets=[];
  const identity={library_id:'a'.repeat(32),profile:'work'};
@@ -69,7 +71,7 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
  const SDK={React,hooks:React,components:{},fetchJSON:api,buildWsUrl:async()=> 'wss://fixture.invalid/api/ws?ticket=synthetic'};
  const ctx={rest:api,register:entry=>{if(entry.render)page=entry.render;}};
  const scope={React,host,ctx,useValue:atom=>atom?.get?.(),ROUTES_AREA:'routes',SIDEBAR_NAV_AREA:'nav',Button:'button',Input:'input',
-  crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,TextEncoder,btoa,Uint8Array,document:dom.window.document,
+  ResizeObserver,crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,TextEncoder,btoa,Uint8Array,document:dom.window.document,
   window:{__HERMES_PLUGIN_SDK__:SDK,__HERMES_PLUGINS__:{register:(_name,Page)=>{page=()=>React.createElement(Page);}}}};
  let source=fs.readFileSync(target==='desktop'?'desktop/plugin.js':'dashboard/dist/index.js','utf8');
  if(target==='desktop')source=source.replace(/^import .*;\n/gm,'').replace('export default','const plugin=')+'\nplugin.register(ctx);';
@@ -81,6 +83,7 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
   field(label){return app.element.querySelector(`[aria-label="${label}"]`);},
   async rerender(){await React.act(async()=>root.render(page()));},
   async setScope(next){profile=next.profile||profile;connection=next.connection||connection;await app.rerender();},
+  async resize(width){await React.act(async()=>{for(const observer of [...resizeObservers])observer.callback([{contentRect:{width}}]);});},
   async close(){await React.act(async()=>root.unmount());dom.window.close();delete global.window;delete global.document;}};
  if(autoOpen&&button(app,'Chat'))await click(button(app,'Chat'),app);
  return app;

@@ -4,7 +4,7 @@ A standalone bookmark and image-library plugin for Hermes Desktop, Dashboard, an
 
 **Development preview.** The library-first workspace now includes nested collections, tags, grid/list views, metadata/notes/image dialogs, revision-safe edits, durable capture receipts, and collapsible Hermes-backed chat. Chat has focused controller/transport and both-emitted-client React tests; authenticated real-host binding routes pass. Connected Desktop and real-provider acceptance remain open; see current verification rather than treating unit tests as installed-host proof. Synthetic real-provider verification and PR publication are approved; merge/release/live installation are not. This is not a v1 release or an approved live deployment.
 
-Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). Current workspace evidence is tracked in [library-first verification](docs/verification/library-first-workspace.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
+Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). Current workspace evidence is tracked in [library-first verification](docs/verification/library-first-workspace.md), with the [preserved final review and author fixes](docs/verification/library-first-revision-review-fixes.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
 
 ## Working foundation
 

@@ -504,15 +504,29 @@ function bookmarkMarkdown(React,text){
   catch{return h('pre',{className:'hb-markdown'},source);}
 }
 
-const bookmarkLibraryDrafts=new Map(),bookmarkLibraryViews=new Map();
+const bookmarkLibraryDrafts=new Map(),bookmarkLibraryViews=new Map(),bookmarkCollectionDrafts=new Map();
+function bookmarkDraftChanged(draft){for(const listener of [...(draft.listeners||[])])listener();}
+function bookmarkScopeCheck(adapter,scope){if(adapter.currentScope&&adapter.currentScope()!==scope){const error=Error('The connection or profile changed. Reopen this library.');error.code='scope_changed';error.dispatched=false;throw error;}}
+function bookmarkPayload(payload){
+ if(!payload?.ok){const detail=payload?.error,error=Error(typeof detail?.message==='string'?detail.message.slice(0,2000):'The library request failed.');error.code=typeof detail?.code==='string'?detail.code:'invalid_response';if(Number.isSafeInteger(detail?.current_revision)&&detail.current_revision>0)error.current_revision=detail.current_revision;throw error;}
+ return payload;
+}
+function bookmarkHostError(error){
+ // Public Dashboard ApiError exposes status + a raw body, unlike ctx.rest.
+ if(Number.isInteger(error?.status)&&error.status>=400&&error.status<=599&&typeof error.body==='string'&&error.body.length<=131072){
+  try{const body=JSON.parse(error.body);if(body?.ok===false&&['invalid_argument','invalid_url','not_found','conflict','configuration_error','storage_error'].includes(body.error?.code)){try{bookmarkPayload(body);}catch(domain){return domain;}}}catch{}
+ }
+ return error;
+}
+async function bookmarkOwnedRequest(adapter,ctx,scope,route,init){
+ bookmarkScopeCheck(adapter,scope);
+ try{return bookmarkPayload(await adapter.request(ctx,route,init));}catch(error){throw bookmarkHostError(error);}
+}
 function bookmarkLibraryKey(scope,libraryId){let connection=scope;try{const value=JSON.parse(scope);if(Array.isArray(value))connection=value[0];}catch{}return JSON.stringify([connection,libraryId]);}
 function bookmarkItemName(item){return item.title||item.url||'Untitled image';}
 function bookmarkQuery(state){const params=new URLSearchParams({query:state.query||'',view:state.view||'all',limit:String(state.limit||50),offset:String(state.offset||0)});if(state.collectionId)params.set('collection_id',state.collectionId);for(const tag of state.tags||[])params.append('tag',tag);return params.toString();}
 async function bookmarkRequest(adapter,ctx,scope,route,init){
- const check=()=>{if(adapter.currentScope&&adapter.currentScope()!==scope){const error=Error('The connection or profile changed. Reopen this library.');error.code='scope_changed';throw error;}};
- check();const payload=await adapter.request(ctx,route,init);check();
- if(!payload?.ok){const error=Error(payload?.error?.message||'The library request failed.');error.code=payload?.error?.code||'invalid_response';error.current_revision=payload?.error?.current_revision;throw error;}
- return payload;
+ const payload=await bookmarkOwnedRequest(adapter,ctx,scope,route,init);bookmarkScopeCheck(adapter,scope);return payload;
 }
 function createBookmarkAssetImage(React,adapter){
  const {createElement:h,useEffect,useRef,useState}=React;
@@ -542,28 +556,38 @@ function createLibraryDialog(React,components){
 function createLibraryForm(React,adapter,components){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
  const Dialog=createLibraryDialog(React,components),AssetImage=createBookmarkAssetImage(React,adapter);
- const tagsOf=value=>[...new Set(value.split(',').map(tag=>tag.trim()).filter(Boolean))];
+ const formatTags=tags=>tags.map(tag=>/[",\r\n]/.test(tag)?'"'+tag.replaceAll('"','""')+'"':tag).join(', ');
+ function tagsOf(value,strict=false){
+  const tags=[];let label='',quoted=false;
+  for(let i=0;i<value.length;i++){const char=value[i];if(char==='"'){if(quoted&&value[i+1]==='"'){label+='"';i++;}else quoted=!quoted;}else if(char===','&&!quoted){if(label.trim())tags.push(label.trim());label='';}else label+=char;}
+  if(quoted&&strict)throw Object.assign(Error('Close the quoted tag before saving.'),{code:'invalid_argument'});
+  if(label.trim())tags.push(label.trim());return [...new Set(tags)];
+ }
+ const valueOf=(item,defaultCollection)=>({kind:item?.kind||'link',url:item?.url||'',title:item?.title||'',description:item?.description||'',notes:item?.notes||'',collection_id:item?.collection_id||defaultCollection||null,tags:formatTags(item?.tags||[]),favorite:!!item?.favorite,read_later:!!item?.read_later,primary_asset_id:item?.primary_asset_id||null,attachment_ids:(item?.attachments||[]).filter(asset=>asset.role!=='primary').map(asset=>asset.asset_id)});
  return function LibraryForm({ctx,scope,libraryId,item,defaultCollection,onSaved,onClose}){
   const storeKey=bookmarkLibraryKey(scope,libraryId)+'/'+(item?.id||'new');
   if(!bookmarkLibraryDrafts.has(storeKey)){
-   const value={kind:item?.kind||'link',url:item?.url||'',title:item?.title||'',description:item?.description||'',notes:item?.notes||'',collection_id:item?.collection_id||defaultCollection||null,tags:(item?.tags||[]).join(', '),favorite:!!item?.favorite,read_later:!!item?.read_later,primary_asset_id:item?.primary_asset_id||null,attachment_ids:(item?.attachments||[]).filter(asset=>asset.role!=='primary').map(asset=>asset.asset_id)};
-   bookmarkLibraryDrafts.set(storeKey,{id:crypto.randomUUID(),key:crypto.randomUUID(),value,initial:JSON.stringify(value),original:item,phase:'editing',error:'',uploads:0});
+   const value=valueOf(item,defaultCollection);
+   bookmarkLibraryDrafts.set(storeKey,{id:crypto.randomUUID(),key:crypto.randomUUID(),value,initial:JSON.stringify(value),original:item,phase:'editing',error:'',uploads:0,listeners:new Set()});
   }
   const draft=useRef(bookmarkLibraryDrafts.get(storeKey)).current,value=draft.value,live=useRef(true);
   const [,paint]=useState(0),[confirm,setConfirm]=useState(false),[preview,setPreview]=useState(false);
   const [collectionQuery,setCollectionQuery]=useState(''),[collectionOffset,setCollectionOffset]=useState(0),[collections,setCollections]=useState([]),[collectionTotal,setCollectionTotal]=useState(0);
-  function changed(){if(live.current)paint(n=>n+1);}
+  function changed(){bookmarkDraftChanged(draft);}
   function field(name,next){value[name]=next;draft.error='';changed();}
-  const api=(route,init)=>bookmarkRequest(adapter,ctx,scope,route,init);
-  useEffect(()=>{live.current=true;return()=>{live.current=false;};},[]);
+  const api=(route,init)=>bookmarkOwnedRequest(adapter,ctx,scope,route,init);
+  useEffect(()=>{live.current=true;const publish=()=>{
+   if(!live.current||(adapter.currentScope&&adapter.currentScope()!==scope))return;
+   if(draft.phase==='saved'&&!draft.delivered){draft.delivered=true;if(bookmarkLibraryDrafts.get(storeKey)===draft)bookmarkLibraryDrafts.delete(storeKey);onSaved({item:draft.saved,receipt:draft.receipt});}
+   else paint(n=>n+1);
+  };draft.listeners.add(publish);if(draft.phase==='saved')publish();return()=>{live.current=false;draft.listeners.delete(publish);};},[]);
   useEffect(()=>{let active=true;api('/collections?limit=50&offset='+collectionOffset+'&query='+encodeURIComponent(collectionQuery)).then(payload=>{if(active){setCollections(previous=>collectionOffset?[...previous,...payload.result.collections]:payload.result.collections);setCollectionTotal(payload.result.total);}}).catch(()=>{});return()=>{active=false;};},[collectionQuery,collectionOffset]);
   function discard(){draft.discarded=true;bookmarkLibraryDrafts.delete(storeKey);onClose();}
   function close(){if(draft.phase==='saving'){draft.error='Saving is still in progress. Keep this form open until the outcome is known.';changed();return;}if(JSON.stringify(value)!==draft.initial||draft.phase==='uncertain'||draft.uploads>0)setConfirm(true);else onClose();}
   function finish(payload){
    const record=payload.item||payload.result,receipt=payload.receipt;
    if(receipt?.outcome==='duplicate'){draft.phase='duplicate';draft.saved=record;draft.receipt=receipt;draft.error='This URL is already saved. Your staged fields have not overwritten it.';changed();return;}
-   draft.phase='saved';draft.saved=record;draft.receipt=receipt;bookmarkLibraryDrafts.delete(storeKey);
-   if(live.current)onSaved({item:record,receipt});
+   draft.phase='saved';draft.saved=record;draft.receipt=receipt;changed();
   }
   async function verify(){
    if(draft.phase==='saving')return;draft.phase='saving';changed();
@@ -584,11 +608,11 @@ function createLibraryForm(React,adapter,components){
    catch(error){draft.phase=error.code==='not_found'?'retry':'uncertain';draft.error=error.code==='not_found'?'No saved operation was found. You may retry the original save explicitly.':'Could not verify the previous save. Your input is preserved.';changed();}
   }
   async function save(event){
-   event.preventDefault();if(['saving','uncertain','duplicate'].includes(draft.phase)||draft.uploads)return;
+   event.preventDefault();if(['saving','uncertain','duplicate','conflict'].includes(draft.phase)||draft.uploads)return;
    draft.phase='saving';draft.error='';changed();
    try{
     if(new TextEncoder().encode(value.notes).length>65536||new TextEncoder().encode(value.description).length>16384)throw Object.assign(Error('Notes or description exceed their text limit.'),{code:'invalid_argument'});
-    const tags=tagsOf(value.tags);
+    const tags=item&&value.tags===JSON.parse(draft.initial).tags?[...(draft.original.tags||[])]:tagsOf(value.tags,true);
     if(item){
      const original=draft.original,oldTags=original.tags||[],changes={};
      for(const name of ['title','description','notes','collection_id','favorite','read_later'])if(value[name]!==JSON.parse(draft.initial)[name])changes[name]=value[name];
@@ -607,7 +631,7 @@ function createLibraryForm(React,adapter,components){
      const payload=await api('/items',{method:'POST',body:draft.submission});finish({item:payload.result,receipt:payload.receipt});
     }
    }catch(error){
-    const known=['invalid_argument','invalid_url','not_found','conflict','configuration_error','scope_changed'].includes(error.code);
+    const known=['invalid_argument','invalid_url','not_found','conflict','configuration_error'].includes(error.code)||(error.code==='scope_changed'&&error.dispatched===false);
     draft.phase=error.code==='conflict'?'conflict':known?'editing':'uncertain';draft.error=known?error.message:'Save outcome is uncertain. Verify save before submitting again. Your draft is preserved.';
     if(known&&!item)draft.submission=null;
     if(known&&item)draft.editSubmission=null;
@@ -617,6 +641,20 @@ function createLibraryForm(React,adapter,components){
   async function reload(){
    try{const payload=await api('/items/'+encodeURIComponent(item.id));if(!live.current)return;draft.discarded=true;bookmarkLibraryDrafts.delete(storeKey);onSaved({item:payload.result,reopenEdit:true});}
    catch(error){draft.error=error.message;changed();}
+  }
+  async function compare(){
+   if(draft.comparing)return;draft.comparing=true;changed();
+   try{const payload=await api('/items/'+encodeURIComponent(item.id));draft.review=payload.result;}
+   catch(error){draft.error=error.message;}finally{draft.comparing=false;changed();}
+  }
+  function adoptReviewed(){
+   try{
+   const record=draft.review;if(!record||draft.phase!=='conflict')return;
+   const before=JSON.parse(draft.initial),base=valueOf(record,null),local={};
+   for(const name of Object.keys(base))if(JSON.stringify(value[name])!==JSON.stringify(before[name]))local[name]=value[name];
+   if(Object.hasOwn(local,'tags')){const previous=draft.original.tags||[],desired=tagsOf(local.tags,true),removed=previous.filter(tag=>!desired.includes(tag)),added=desired.filter(tag=>!previous.includes(tag));local.tags=formatTags([...new Set([...(record.tags||[]).filter(tag=>!removed.includes(tag)),...added])]);}
+   Object.assign(value,base,local);draft.initial=JSON.stringify(base);draft.original=record;draft.review=null;draft.editSubmission=null;draft.phase='editing';draft.error='Reviewed revision selected. Save explicitly to apply your local changes.';changed();
+   }catch(error){draft.error=error.message;changed();}
   }
   async function upload(event,primary){
    const files=[...(event.currentTarget.files||[])];if(!files.length||draft.uploads)return;
@@ -639,16 +677,16 @@ function createLibraryForm(React,adapter,components){
     value.kind==='link'?input('Bookmark URL','url',{type:'url',required:true,maxLength:8192,readOnly:!!item,placeholder:'https://…'}):h('label',{className:'hb-field'},'Primary image',!item&&h('input',{type:'file','aria-label':'Primary image',accept:'image/png,image/jpeg,image/webp',disabled:busy||locked||!!draft.uploads,onChange:event=>upload(event,true)}),value.primary_asset_id&&h(AssetImage,{ctx,scope,assetId:value.primary_asset_id,alt:'Primary saved image'})),
     input('Title','title',{maxLength:1000,placeholder:'Optional title'}),
     h('div',{className:'hb-field'},h('label',null,'Collection search',h(Input,{'aria-label':'Collection search',value:collectionQuery,onChange:event=>{setCollectionOffset(0);setCollectionQuery(event.target.value);}})),h('label',null,'Collection',h('select',{'aria-label':'Collection',value:value.collection_id||'',disabled:busy||locked,onChange:event=>field('collection_id',event.target.value||null)},h('option',{value:''},'Inbox'),!selected&&value.collection_id&&h('option',{value:value.collection_id},'Current collection'),collections.map(row=>h('option',{key:row.id,value:row.id},(row.path||[{name:row.name}]).map(part=>part.name).join(' / '))))),collections.length<collectionTotal&&h(Button,{type:'button',onClick:()=>setCollectionOffset(collections.length)},'More collections')),
-    h('details',{className:'hb-form-section',open:!!value.tags},h('summary',null,'Tags',value.tags?' · '+tagsOf(value.tags).length:''),input('Tags','tags',{placeholder:'Comma-separated tags'}),item?.tag_details?.some(tag=>tag.source==='generated')&&h('p',{className:'hb-muted'},'Existing AI tags stay generated unless you change them.')),
+    h('details',{className:'hb-form-section',open:!!value.tags},h('summary',null,'Tags',value.tags?' · '+tagsOf(value.tags).length:''),h('label',{className:'hb-field'},'Tags',h('textarea',{'aria-label':'Tags',rows:2,value:value.tags,disabled:busy||locked,placeholder:'Comma-separated; quote tags containing commas',onInput:event=>field('tags',event.currentTarget.value),onChange:event=>field('tags',event.target.value)})),h('p',{className:'hb-muted'},'Use double quotes around a tag containing a comma; double a quote inside a quoted tag.'),item?.tag_details?.some(tag=>tag.source==='generated')&&h('p',{className:'hb-muted'},'Existing AI tags stay generated unless you change them.')),
     h('details',{className:'hb-form-section',open:!!value.notes},h('summary',null,'Notes',value.notes?' · has content':''),h('label',{className:'hb-field'},'Personal notes',h('textarea',{'aria-label':'Personal notes',value:value.notes,rows:8,disabled:busy||locked,onInput:event=>field('notes',event.currentTarget.value),onChange:event=>field('notes',event.target.value)})),h(Button,{type:'button',onClick:()=>setPreview(current=>!current)},preview?'Hide note preview':'Preview notes'),preview&&bookmarkMarkdown(React,value.notes)),
     h('details',{className:'hb-form-section',open:!!value.description},h('summary',null,'Description'),h('label',{className:'hb-field'},'Description',h('textarea',{'aria-label':'Description',value:value.description,rows:3,disabled:busy||locked,onChange:event=>field('description',event.target.value),onInput:event=>field('description',event.currentTarget.value)}))),
     h('details',{className:'hb-form-section',open:value.attachment_ids.length>0},h('summary',null,'Image attachments · '+value.attachment_ids.length),h('input',{type:'file',multiple:true,'aria-label':'Attachment images',accept:'image/png,image/jpeg,image/webp',disabled:busy||locked||!!draft.uploads,onChange:event=>upload(event,false)}),h('div',{className:'hb-attachments'},value.attachment_ids.map(assetId=>h('div',{key:assetId,'data-asset-id':assetId},h(AssetImage,{ctx,scope,assetId,alt:'Attached image'}),h(Button,{type:'button',disabled:busy||locked,onClick:()=>field('attachment_ids',value.attachment_ids.filter(id=>id!==assetId))},'Remove image'))))),
     h('div',{className:'hb-flags'},['favorite','read_later'].map(name=>h('label',{key:name},h('input',{type:'checkbox','aria-label':name==='favorite'?'Favorite':'Read later',checked:value[name],disabled:busy||locked,onChange:event=>field(name,event.target.checked)}),name==='favorite'?'Favorite':'Read later'))),
     draft.uploads>0&&h('p',{role:'status'},'Uploading images…'),draft.error&&h('div',{role:'alert',className:'hb-error'},draft.error),
-    draft.phase==='conflict'&&h('div',null,h('p',null,'A newer version exists. Reload saved discards your local changes only after confirmation.'),h(Button,{type:'button',onClick:()=>{if(draft.reloadConfirm)reload();else{draft.reloadConfirm=true;changed();}}},draft.reloadConfirm?'Confirm reload saved':'Reload saved'),h(Button,{type:'button',onClick:()=>{draft.phase='editing';changed();}},'Keep editing')),
+    draft.phase==='conflict'&&h('div',null,h('p',null,'A newer version exists. Keep editing compares the saved version while preserving your local fields. Reload saved discards them only after confirmation.'),h(Button,{type:'button',onClick:()=>{if(draft.reloadConfirm)reload();else{draft.reloadConfirm=true;changed();}}},draft.reloadConfirm?'Confirm reload saved':'Reload saved'),h(Button,{type:'button',disabled:!!draft.comparing,onClick:compare},draft.comparing?'Comparing…':'Keep editing'),draft.review&&h('section',{'aria-label':'Saved version comparison'},h('h3',null,'Saved revision '+draft.review.revision),h('pre',null,JSON.stringify({title:draft.review.title,description:draft.review.description,notes:draft.review.notes,tags:draft.review.tags,collection_id:draft.review.collection_id,favorite:draft.review.favorite,read_later:draft.review.read_later},null,2)),h('p',null,'Your edited fields remain above. Unedited fields adopt this saved version only after confirmation; Save still checks its revision.'),h(Button,{type:'button',onClick:adoptReviewed},'Use reviewed revision'))),
     draft.phase==='duplicate'&&h(Button,{type:'button',onClick:()=>onSaved({item:draft.saved,receipt:draft.receipt,openExisting:true})},'Open existing'),
     h('p',{className:'hb-muted'},value.kind==='link'?'Saving queues configured page enrichment; provider charges and retries may apply.':'The image is stored as a library item. Visual AI analysis is not available in this preview.'),
-    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:close},'Cancel'),draft.phase==='uncertain'?h(Button,{type:'button',onClick:verify},'Verify save'):h(Button,{type:'submit',disabled:busy||['uncertain','duplicate'].includes(draft.phase)||draft.uploads>0||(value.kind==='image'&&!value.primary_asset_id)},busy?'Saving…':draft.phase==='retry'?'Retry original save':'Save'))));
+    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:close},'Cancel'),draft.phase==='uncertain'?h(Button,{type:'button',onClick:verify},'Verify save'):h(Button,{type:'submit',disabled:busy||['uncertain','duplicate','conflict'].includes(draft.phase)||draft.uploads>0||(value.kind==='image'&&!value.primary_asset_id)},busy?'Saving…':draft.phase==='retry'?'Retry original save':'Save'))));
  };
 }
 
@@ -672,54 +710,63 @@ function createLibraryDetail(React,adapter,components){
 
 function createLibraryNavigation(React,adapter,components){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input',Dialog=createLibraryDialog(React,components);
+ const merge=(old,rows,key)=>[...new Map([...old,...rows].map(row=>[row[key],row])).values()];
  function CollectionLevel({ctx,scope,parentId,query,onQueryChange,search,revision,onManage,depth=0}){
-  const [rows,setRows]=useState([]),[expanded,setExpanded]=useState(new Set()),[total,setTotal]=useState(0),[offset,setOffset]=useState(0),[error,setError]=useState('');
-  useEffect(()=>{setOffset(0);},[search,parentId]);
+  const [rows,setRows]=useState([]),[expanded,setExpanded]=useState(new Set()),[total,setTotal]=useState(0),[cursor,setCursor]=useState(null),[error,setError]=useState('');
+  const pageKey=JSON.stringify([scope,parentId,search,revision]),offset=cursor?.key===pageKey?cursor.offset:0;
   useEffect(()=>{let active=true;let path='/collections?limit=50&offset='+offset+'&query='+encodeURIComponent(search);if(parentId)path+='&parent_id='+encodeURIComponent(parentId);
-   bookmarkRequest(adapter,ctx,scope,path).then(payload=>{if(active){setRows(previous=>offset?[...previous,...payload.result.collections]:payload.result.collections);setTotal(payload.result.total);setError('');}}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};
-  },[ctx,scope,parentId,search,offset,revision]);
+   bookmarkRequest(adapter,ctx,scope,path).then(payload=>{if(active){setRows(previous=>offset?merge(previous,payload.result.collections,'id'):payload.result.collections);setTotal(payload.result.total);setError('');}}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};
+  },[ctx,scope,pageKey,offset]);
   return h('div',{className:'hb-collection-level'},error&&h('p',{role:'alert'},error),h('ul',null,rows.map(row=>h('li',{key:row.id},
    h('div',{className:'hb-collection-row'},!search&&h(Button,{type:'button','aria-label':(expanded.has(row.id)?'Collapse ':'Expand ')+row.name,'aria-expanded':expanded.has(row.id),disabled:depth>=15,onClick:()=>setExpanded(previous=>{const next=new Set(previous);if(next.has(row.id))next.delete(row.id);else next.add(row.id);return next;})},expanded.has(row.id)?'▾':'▸'),
     h(Button,{type:'button','aria-label':'Collection '+(row.path||[{name:row.name}]).map(part=>part.name).join(' / '),'aria-current':query.collectionId===row.id?'page':undefined,onClick:()=>onQueryChange({view:'all',collectionId:row.id})},search?(row.path||[{name:row.name}]).map(part=>part.name).join(' / '):row.name,h('span',{className:'hb-count'},row.count||0)),
     h(Button,{type:'button','aria-label':'Manage collection '+row.name,onClick:()=>onManage(row)},'⋯')),
-   !search&&expanded.has(row.id)&&depth<15&&h(CollectionLevel,{ctx,scope,parentId:row.id,query,onQueryChange,search:'',revision,onManage,depth:depth+1})))),rows.length<total&&h(Button,{type:'button',onClick:()=>setOffset(rows.length)},'More collections'));
+   !search&&expanded.has(row.id)&&depth<15&&h(CollectionLevel,{ctx,scope,parentId:row.id,query,onQueryChange,search:'',revision,onManage,depth:depth+1})))),rows.length<total&&h(Button,{type:'button',onClick:()=>setCursor({key:pageKey,offset:rows.length})},'More collections'));
  }
- return function LibraryNavigation({ctx,scope,libraryId,query,onQueryChange,onChanged,revision=0}){
-  const [counts,setCounts]=useState({}),[tagRows,setTagRows]=useState([]),[tagTotal,setTagTotal]=useState(0),[tagOffset,setTagOffset]=useState(0),[tagQuery,setTagQuery]=useState(''),[collectionSearch,setCollectionSearch]=useState('');
-  const [edit,setEdit]=useState(null),[error,setError]=useState(''),[saving,setSaving]=useState(false),[confirm,setConfirm]=useState(false),[parentRows,setParentRows]=useState([]),[parentQuery,setParentQuery]=useState('');
-  const alive=useRef(true),busy=useRef(false);
-  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ return function LibraryNavigation({ctx,scope,libraryId,query,onQueryChange,onChanged,revision=0,narrow=false,drawer=false,onDrawerClose=()=>{}}){
+  const [counts,setCounts]=useState({}),[tagRows,setTagRows]=useState([]),[tagTotal,setTagTotal]=useState(0),[tagCursor,setTagCursor]=useState(null),[tagQuery,setTagQuery]=useState(''),[collectionSearch,setCollectionSearch]=useState('');
+  const [parentRows,setParentRows]=useState([]),[parentQuery,setParentQuery]=useState(''),[,paint]=useState(0);
+  const key=bookmarkLibraryKey(scope,libraryId);
+  if(!bookmarkCollectionDrafts.has(key))bookmarkCollectionDrafts.set(key,{edit:null,error:'',saving:false,confirm:false,epoch:0,listeners:new Set()});
+  const state=useRef(bookmarkCollectionDrafts.get(key)).current,callbacks=useRef(null);callbacks.current={onChanged,onDrawerClose};
+  const {edit,error,saving,confirm}=state,tagPageKey=JSON.stringify([scope,tagQuery,revision]),tagOffset=tagCursor?.key===tagPageKey?tagCursor.offset:0;
+  const changed=()=>bookmarkDraftChanged(state);
+  function set(name,value){state[name]=typeof value==='function'?value(state[name]):value;changed();}
+  const setEdit=value=>set('edit',value),setError=value=>set('error',value),setConfirm=value=>set('confirm',value);
+  useEffect(()=>{let active=true,last=state.epoch;const publish=()=>{if(!active||(adapter.currentScope&&adapter.currentScope()!==scope))return;paint(n=>n+1);if(last!==state.epoch){last=state.epoch;callbacks.current.onChanged();}};state.listeners.add(publish);return()=>{active=false;state.listeners.delete(publish);};},[scope,libraryId]);
   useEffect(()=>{let active=true;bookmarkRequest(adapter,ctx,scope,'/counts').then(payload=>{if(active)setCounts(payload.result);}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[ctx,scope,revision]);
-  useEffect(()=>{let active=true;bookmarkRequest(adapter,ctx,scope,'/tags?limit=50&offset='+tagOffset+'&query='+encodeURIComponent(tagQuery)).then(payload=>{if(active){setTagRows(previous=>tagOffset?[...previous,...payload.result.tags]:payload.result.tags);setTagTotal(payload.result.total);}}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[ctx,scope,tagOffset,tagQuery,revision]);
+  useEffect(()=>{let active=true;bookmarkRequest(adapter,ctx,scope,'/tags?limit=50&offset='+tagOffset+'&query='+encodeURIComponent(tagQuery)).then(payload=>{if(active){setTagRows(previous=>tagOffset?merge(previous,payload.result.tags,'name'):payload.result.tags);setTagTotal(payload.result.total);}}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[ctx,scope,tagPageKey,tagOffset]);
   useEffect(()=>{if(!edit)return;let active=true;bookmarkRequest(adapter,ctx,scope,'/collections?limit=100&query='+encodeURIComponent(parentQuery)).then(payload=>{if(active)setParentRows(payload.result.collections);}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[!!edit,parentQuery]);
-  function manage(row){setError('');setConfirm(false);setParentQuery('');setEdit({id:row?.id||null,name:row?.name||'',parent_id:row?.parent_id||null,revision:row?.revision,initial:JSON.stringify({name:row?.name||'',parent_id:row?.parent_id||null}),deleting:false,policy:''});}
+  function manage(row){if(state.saving)return;state.error='';state.confirm=false;state.uncertain=false;setParentQuery('');setEdit({id:row?.id||null,name:row?.name||'',parent_id:row?.parent_id||null,revision:row?.revision,initial:JSON.stringify({name:row?.name||'',parent_id:row?.parent_id||null}),deleting:false,policy:''});callbacks.current.onDrawerClose();}
   function editField(name,value){setEdit(current=>current?{...current,[name]:value}:current);}
-  function close(){if(busy.current)return;if(edit&&JSON.stringify({name:edit.name,parent_id:edit.parent_id})!==edit.initial)setConfirm(true);else setEdit(null);}
+  function close(){if(state.saving)return;if(state.edit&&JSON.stringify({name:state.edit.name,parent_id:state.edit.parent_id})!==state.edit.initial)setConfirm(true);else setEdit(null);}
   async function mutate(event){
-   event.preventDefault();if(busy.current||!edit)return;busy.current=true;setSaving(true);setError('');const target=edit;
+   event.preventDefault();if(state.saving||state.uncertain||!state.edit)return;state.saving=true;state.error='';changed();const target=state.edit;
    try{let path='/collections',body={name:target.name,parent_id:target.parent_id};
     if(target.id){path+='/'+encodeURIComponent(target.id)+(target.deleting?'/delete':'/update');body=target.deleting?{expected_revision:target.revision,contents_policy:target.policy}:{expected_revision:target.revision,changes:{name:target.name,parent_id:target.parent_id}};}
-    await bookmarkRequest(adapter,ctx,scope,path,{method:'POST',body});if(alive.current){setEdit(null);onChanged();}
-   }catch(error){if(alive.current)setError(error.message);}finally{busy.current=false;if(alive.current)setSaving(false);}
+    await bookmarkOwnedRequest(adapter,ctx,scope,path,{method:'POST',body});state.edit=null;state.epoch++;
+   }catch(error){state.error=error.message;state.uncertain=!['invalid_argument','invalid_url','not_found','conflict','configuration_error'].includes(error.code);if(state.uncertain)state.error='Collection outcome is uncertain. Your fields are retained; inspect the saved library before creating another collection.';}
+   finally{state.saving=false;changed();}
   }
-  return h('nav',{className:'hb-library-navigation','aria-label':'Library navigation'},
+  const navigation=h('nav',{className:'hb-library-navigation','aria-label':'Library navigation'},
    h('div',{className:'hb-system-views'},[['all','All items'],['inbox','Inbox'],['favorites','Favorites'],['read_later','Read later']].map(([view,label])=>h(Button,{key:view,type:'button','aria-label':label,'aria-current':query.view===view&&!query.collectionId?'page':undefined,onClick:()=>onQueryChange({view,collectionId:null})},h('span',null,label),h('span',{className:'hb-count'},counts[view]??'…')))),
    h('div',{className:'hb-nav-heading'},h('h2',null,'Collections'),h(Button,{type:'button','aria-label':'New collection',onClick:()=>manage(null)},'+')),
    h(Input,{type:'search','aria-label':'Find collections',placeholder:'Find a collection',value:collectionSearch,onChange:event=>setCollectionSearch(event.target.value),onInput:event=>setCollectionSearch(event.currentTarget.value)}),
    h(CollectionLevel,{ctx,scope,parentId:null,query,onQueryChange,search:collectionSearch,revision,onManage:manage}),
    h('div',{className:'hb-nav-heading'},h('h2',null,'Tags')),
-   h(Input,{type:'search','aria-label':'Find tags',placeholder:'Find a tag',value:tagQuery,onChange:event=>{setTagOffset(0);setTagQuery(event.target.value);},onInput:event=>{setTagOffset(0);setTagQuery(event.currentTarget.value);}}),
+   h(Input,{type:'search','aria-label':'Find tags',placeholder:'Find a tag',value:tagQuery,onChange:event=>setTagQuery(event.target.value),onInput:event=>setTagQuery(event.currentTarget.value)}),
    h('div',{className:'hb-nav-tags'},tagRows.map(tag=>h(Button,{key:tag.name,type:'button','aria-label':'Tag '+tag.name,'aria-pressed':query.tags.includes(tag.name),onClick:()=>onQueryChange({tags:query.tags.includes(tag.name)?query.tags.filter(name=>name!==tag.name):[...query.tags,tag.name]})},'#'+tag.name,h('span',{className:'hb-count'},tag.count)))),
-   tagRows.length<tagTotal&&h(Button,{type:'button',onClick:()=>setTagOffset(tagRows.length)},'More tags'),
-   error&&!edit&&h('p',{role:'alert',className:'hb-error'},error),
-   edit&&h(Dialog,{title:edit.deleting?'Delete collection':edit.id?'Manage collection':'New collection',description:'Collections organize shared items. Deleting a collection never deletes its bookmarks.',onCloseRequest:close},
-    confirm?h('section',null,h('p',null,'Discard these unsaved collection changes?'),h(Button,{type:'button',onClick:()=>setConfirm(false)},'Keep editing'),h(Button,{type:'button',onClick:()=>setEdit(null)},'Discard')):
-    h('form',{onSubmit:mutate,className:'hb-item-form'},
-     edit.deleting?h('label',{className:'hb-field'},'Move contents',h('select',{'aria-label':'Collection contents policy',value:edit.policy,required:true,onChange:event=>editField('policy',event.target.value)},h('option',{value:''},'Choose where items and child collections go'),h('option',{value:'move_to_parent'},'Move to parent / Inbox'),h('option',{value:'move_to_inbox'},'Move to Inbox / root'))):h(React.Fragment,null,
-      h('label',{className:'hb-field'},'Collection name',h(Input,{'aria-label':'Collection name',required:true,maxLength:100,value:edit.name,onChange:event=>editField('name',event.target.value),onInput:event=>editField('name',event.currentTarget.value)})),
-      h('label',{className:'hb-field'},'Find parent collection',h(Input,{'aria-label':'Find parent collection',value:parentQuery,onChange:event=>setParentQuery(event.target.value)})),
-      h('label',{className:'hb-field'},'Parent collection',h('select',{'aria-label':'Parent collection',value:edit.parent_id||'',onChange:event=>editField('parent_id',event.target.value||null)},h('option',{value:''},'Root'),edit.parent_id&&!parentRows.some(row=>row.id===edit.parent_id)&&h('option',{value:edit.parent_id},'Current parent'),parentRows.filter(row=>row.id!==edit.id).map(row=>h('option',{key:row.id,value:row.id},(row.path||[{name:row.name}]).map(part=>part.name).join(' / ')))))),
-     error&&h('p',{role:'alert',className:'hb-error'},error),h('div',{className:'hb-form-actions'},edit.id&&!edit.deleting&&h(Button,{type:'button',disabled:saving,onClick:()=>setEdit(current=>({...current,deleting:true}))},'Delete collection'),h(Button,{type:'button',disabled:saving,onClick:close},'Cancel'),h(Button,{type:'submit',disabled:saving||(edit.deleting&&!edit.policy)},saving?'Saving…':edit.deleting?'Confirm delete':'Save collection')))));
+   tagRows.length<tagTotal&&h(Button,{type:'button',onClick:()=>setTagCursor({key:tagPageKey,offset:tagRows.length})},'More tags'),
+   error&&!edit&&h('p',{role:'alert',className:'hb-error'},error));
+  const editor=edit&&h(Dialog,{title:edit.deleting?'Delete collection':edit.id?'Manage collection':'New collection',description:'Collections organize shared items. Deleting a collection never deletes its bookmarks.',onCloseRequest:close},
+   confirm?h('section',null,h('p',null,'Discard these unsaved collection changes?'),h(Button,{type:'button',onClick:()=>setConfirm(false)},'Keep editing'),h(Button,{type:'button',onClick:()=>setEdit(null)},'Discard')):
+   h('form',{onSubmit:mutate,className:'hb-item-form'},
+    edit.deleting?h('label',{className:'hb-field'},'Move contents',h('select',{'aria-label':'Collection contents policy',value:edit.policy,disabled:saving||state.uncertain,required:true,onChange:event=>editField('policy',event.target.value)},h('option',{value:''},'Choose where items and child collections go'),h('option',{value:'move_to_parent'},'Move to parent / Inbox'),h('option',{value:'move_to_inbox'},'Move to Inbox / root'))):h(React.Fragment,null,
+     h('label',{className:'hb-field'},'Collection name',h(Input,{'aria-label':'Collection name',required:true,disabled:saving||state.uncertain,maxLength:100,value:edit.name,onChange:event=>editField('name',event.target.value),onInput:event=>editField('name',event.currentTarget.value)})),
+     h('label',{className:'hb-field'},'Find parent collection',h(Input,{'aria-label':'Find parent collection',value:parentQuery,onChange:event=>setParentQuery(event.target.value)})),
+     h('label',{className:'hb-field'},'Parent collection',h('select',{'aria-label':'Parent collection',value:edit.parent_id||'',disabled:saving||state.uncertain,onChange:event=>editField('parent_id',event.target.value||null)},h('option',{value:''},'Root'),edit.parent_id&&!parentRows.some(row=>row.id===edit.parent_id)&&h('option',{value:edit.parent_id},'Current parent'),parentRows.filter(row=>row.id!==edit.id).map(row=>h('option',{key:row.id,value:row.id},(row.path||[{name:row.name}]).map(part=>part.name).join(' / ')))))),
+    error&&h('p',{role:'alert',className:'hb-error'},error),h('div',{className:'hb-form-actions'},edit.id&&!edit.deleting&&h(Button,{type:'button',disabled:saving,onClick:()=>setEdit(current=>({...current,deleting:true}))},'Delete collection'),h(Button,{type:'button',disabled:saving,onClick:close},'Cancel'),h(Button,{type:'submit',disabled:saving||state.uncertain||(edit.deleting&&!edit.policy)},saving?'Saving…':edit.deleting?'Confirm delete':'Save collection'))));
+  return h(React.Fragment,null,narrow?(drawer&&h(Dialog,{title:'Library navigation',description:'Choose a collection, tag or saved view.',onCloseRequest:onDrawerClose},h('div',{className:'hb-nav-shell'},navigation),h(Button,{type:'button',onClick:onDrawerClose},'Close navigation'))):navigation,editor);
  };
 }
 
@@ -741,7 +788,7 @@ function createLibraryItems(React,adapter,components){
 
 function createLibrary(React,adapter,components,styles){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
- const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components),Dialog=createLibraryDialog(React,components);
+ const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components);
  const defaults=()=>({query:'',view:'all',collectionId:null,tags:[],limit:50,offset:0,mode:'grid',selectedIds:[],scroll:0});
  return function Bookmarks({ctx,scope='dashboard',onAsk,onReady}={}){
   const [libraryId,setLibraryId]=useState(null),[query,setQuery]=useState(defaults),[page,setPage]=useState({items:[],total:0}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -782,14 +829,14 @@ function createLibrary(React,adapter,components,styles){
   function saved(result){setForm(null);setNotice(result.receipt?.outcome==='duplicate'?'Already saved. Your staged fields were not applied.':'Saved to your library.');refresh();if(result.reopenEdit)setForm({item:result.item});else if(result.openExisting)setDetail(result.item.id);}
   function askSelection(){const items=query.selectedIds.map(id=>selectedItems.current.get(id)||{id,title:id});onAsk?.(items.slice(0,20));if(items.length>20)setNotice('Only the first 20 selected references were prepared. Nothing was sent.');}
   const heading=query.collectionId?'Collection · includes descendants':({all:'All items',inbox:'Inbox',favorites:'Favorites',read_later:'Read later'})[query.view];
-  const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision};
+  const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision,narrow,drawer,onDrawerClose:()=>setDrawer(false)};
   return h('section',{ref:libraryRoot,className:'hb-library','aria-label':'Bookmarks'},
    h('div',{className:'hb-library-topbar'},h(Button,{type:'button','aria-label':'Toggle library navigation','aria-expanded':drawer,onClick:()=>setDrawer(open=>!open)},'☰'),
     h('form',{className:'hb-search',onSubmit:event=>{event.preventDefault();change({query:search});}},h(Input,{type:'search',name:'query','aria-label':'Search bookmarks',value:search,placeholder:'Search your library…',onChange:event=>setSearch(event.target.value),onInput:event=>setSearch(event.currentTarget.value)}),h(Button,{type:'submit'},'Search')),
     h(Button,{type:'button',className:'hb-primary',disabled:!libraryId,onClick:()=>{setDetail(null);setForm({item:null});}},'Add')),
    error&&h('div',{role:'alert',className:'hb-error'},error,h(Button,{type:'button',onClick:refresh},'Retry library')),
    notice&&h('p',{role:'status',className:'hb-notice'},notice),
-   h('div',{className:'hb-library-layout','data-navigation-open':drawer},libraryId&&!narrow&&h(Navigation,navigationProps),
+   h('div',{className:'hb-library-layout','data-navigation-open':drawer},libraryId&&h(Navigation,navigationProps),
     h('main',{className:'hb-library-content',ref:surface,onScroll:event=>{query.scroll=event.currentTarget.scrollTop;}},
      h('div',{className:'hb-library-heading'},h('div',null,h('h1',null,heading),h('p',{className:'hb-muted',role:'status'},loading?'Loading library…':page.total+' saved items')),
       h('div',{className:'hb-view-mode'},h(Button,{type:'button','aria-label':'Grid view','aria-pressed':query.mode==='grid',onClick:()=>setQuery(previous=>({...previous,mode:'grid'}))},'Grid'),h(Button,{type:'button','aria-label':'List view','aria-pressed':query.mode==='list',onClick:()=>setQuery(previous=>({...previous,mode:'list'}))},'List'))),
@@ -798,7 +845,7 @@ function createLibrary(React,adapter,components,styles){
      query.collectionId&&page.items.length>0&&h(Button,{type:'button',onClick:()=>{onAsk?.(page.items.slice(0,20));setNotice('Prepared up to 20 visible item references. Nothing was sent.');}},'Ask about this collection'),
      !loading&&!page.items.length&&h('div',{className:'hb-empty'},h('h2',null,query.query||query.tags.length?'No matching items':'Nothing here yet'),h('p',null,'Save something worth keeping, or try a different filter.')),
      h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
-   libraryId&&narrow&&drawer&&h(Dialog,{title:'Library navigation',description:'Choose a collection, tag or saved view.',onCloseRequest:()=>setDrawer(false)},h('div',{className:'hb-nav-shell'},h(Navigation,navigationProps)),h(Button,{type:'button',onClick:()=>setDrawer(false)},'Close navigation')),
+
    form&&h(Form,{key:form.item?JSON.stringify([form.item.id,form.item.revision]):'new',ctx,scope,libraryId,item:form.item,defaultCollection:query.collectionId,onSaved:saved,onClose:()=>setForm(null)}),
    detail&&!form&&h(Detail,{key:detail,ctx,scope,libraryId,itemId:detail,onEdit:item=>{setDetail(null);setForm({item});},onAsk,onClose:()=>setDetail(null)}));
  };
