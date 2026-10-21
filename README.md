@@ -34,7 +34,7 @@ Settings live under `plugins.entries.hermes-bookmarks.settings`:
 - `library_root`: an explicit absolute directory outside the installed plugin's code. Use the same value in every participating profile.
 - `enrichment_route`: a mapping containing `provider`, `model`, and `owner_profile`. Only the configured owner may initialize the persisted library route; another profile cannot silently change it. The library route is independent of the native chat model.
 
-Use Hermes configuration commands rather than editing active YAML by hand. Credentials and provider trust grants remain owned by Hermes; do not put keys in plugin settings. Full settings editing and model-selection UX are assigned to M3. The health endpoint reports configured state and startup outcomes without exposing the directory; `library_ready: null` means it has not performed a storage-readiness probe.
+Use Hermes configuration commands rather than editing active YAML by hand. Credentials and provider trust grants remain owned by Hermes; do not put keys in plugin settings. Full library settings editing and background-enrichment model-selection UX are assigned to M3; the chat picker already supports model choice for new conversations. The health endpoint reports configured state and startup outcomes without exposing the directory; `library_ready: null` means it has not performed a storage-readiness probe.
 
 No active install command is provided for this incomplete preview. Installing the backend, copying a Desktop entry into its discovery root, enabling it, and restarting a live service are deployment actions requiring their own scope.
 

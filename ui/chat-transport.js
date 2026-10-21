@@ -52,9 +52,9 @@ function createDashboardChatTransport(SDK,options={}){
   function rpc(method,params={},timeout=requestMs){
     if(terminal)return Promise.reject(terminal);
     if(!socket||socket.readyState!==1)return Promise.reject(Error('Bookmarks gateway is not connected.'));
-    const id='bookmarks-'+(++sequence);
+    const id='bookmarks-'+(++sequence),owner=generation;
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>terminate(Error('Hermes request timed out. Its outcome may be unknown; reconnect to inspect history.')),timeout);
+      const timer=setTimeout(()=>{if(owner===generation)terminate(Error('Hermes request timed out. Its outcome may be unknown; reconnect to inspect history.'));},timeout);
       pending.set(id,{resolve,reject,timer});
       try{socket.send(JSON.stringify({jsonrpc:'2.0',id,method,params}));}catch{terminate(Error('Hermes disconnected; the request outcome may be unknown.'));}
     });
@@ -88,23 +88,23 @@ function createDashboardChatTransport(SDK,options={}){
   function connect(){
     if(terminal)return Promise.reject(terminal);
     if(connecting)return connecting;
-    const current=++generation;
+    const current=++generation,owns=()=>!disposed&&!terminal&&current===generation;
     connecting=new Promise((resolve,reject)=>{
       rejectConnect=reject;
-      connectTimer=setTimeout(()=>terminate(Error('Bookmarks connection timed out. Reconnect to try again.')),connectMs);
+      connectTimer=setTimeout(()=>{if(owns())terminate(Error('Bookmarks connection timed out. Reconnect to try again.'));},connectMs);
       Promise.resolve().then(()=>SDK.buildWsUrl('/api/ws')).then(url=>{
-        if(terminal||current!==generation)return;
+        if(!owns())return;
         socket=new Socket(url);
-        const listen=(type,callback)=>{const owned=socket;owned.addEventListener(type,callback);removers.push(()=>owned.removeEventListener(type,callback));};
+        const listen=(type,callback)=>{const owned=socket,guarded=event=>{if(owns()&&socket===owned)callback(event);};owned.addEventListener(type,guarded);removers.push(()=>owned.removeEventListener(type,guarded));};
         listen('message',message);
         listen('error',()=>terminate(Error('Hermes WebSocket disconnected. Reconnect to inspect history.')));
         listen('close',()=>terminate(Error('Hermes disconnected. A submitted request may still be running; reconnect to inspect history.')));
         listen('open',()=>{
           rpc('client.capabilities',{server_requests:true}).then(()=>{
-            if(terminal||current!==generation)return;clearTimeout(connectTimer);rejectConnect=null;resolve();
-          }).catch(error=>terminate(error));
+            if(!owns())return;clearTimeout(connectTimer);rejectConnect=null;resolve();
+          }).catch(error=>{if(owns())terminate(error);});
         });
-      }).catch(()=>terminate(Error('Could not authenticate the Hermes connection. Reconnect through the Dashboard.')));
+      }).catch(()=>{if(owns())terminate(Error('Could not authenticate the Hermes connection. Reconnect through the Dashboard.'));});
     });
     return connecting;
   }

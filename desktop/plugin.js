@@ -168,9 +168,9 @@ function createDashboardChatTransport(SDK,options={}){
   function rpc(method,params={},timeout=requestMs){
     if(terminal)return Promise.reject(terminal);
     if(!socket||socket.readyState!==1)return Promise.reject(Error('Bookmarks gateway is not connected.'));
-    const id='bookmarks-'+(++sequence);
+    const id='bookmarks-'+(++sequence),owner=generation;
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>terminate(Error('Hermes request timed out. Its outcome may be unknown; reconnect to inspect history.')),timeout);
+      const timer=setTimeout(()=>{if(owner===generation)terminate(Error('Hermes request timed out. Its outcome may be unknown; reconnect to inspect history.'));},timeout);
       pending.set(id,{resolve,reject,timer});
       try{socket.send(JSON.stringify({jsonrpc:'2.0',id,method,params}));}catch{terminate(Error('Hermes disconnected; the request outcome may be unknown.'));}
     });
@@ -204,23 +204,23 @@ function createDashboardChatTransport(SDK,options={}){
   function connect(){
     if(terminal)return Promise.reject(terminal);
     if(connecting)return connecting;
-    const current=++generation;
+    const current=++generation,owns=()=>!disposed&&!terminal&&current===generation;
     connecting=new Promise((resolve,reject)=>{
       rejectConnect=reject;
-      connectTimer=setTimeout(()=>terminate(Error('Bookmarks connection timed out. Reconnect to try again.')),connectMs);
+      connectTimer=setTimeout(()=>{if(owns())terminate(Error('Bookmarks connection timed out. Reconnect to try again.'));},connectMs);
       Promise.resolve().then(()=>SDK.buildWsUrl('/api/ws')).then(url=>{
-        if(terminal||current!==generation)return;
+        if(!owns())return;
         socket=new Socket(url);
-        const listen=(type,callback)=>{const owned=socket;owned.addEventListener(type,callback);removers.push(()=>owned.removeEventListener(type,callback));};
+        const listen=(type,callback)=>{const owned=socket,guarded=event=>{if(owns()&&socket===owned)callback(event);};owned.addEventListener(type,guarded);removers.push(()=>owned.removeEventListener(type,guarded));};
         listen('message',message);
         listen('error',()=>terminate(Error('Hermes WebSocket disconnected. Reconnect to inspect history.')));
         listen('close',()=>terminate(Error('Hermes disconnected. A submitted request may still be running; reconnect to inspect history.')));
         listen('open',()=>{
           rpc('client.capabilities',{server_requests:true}).then(()=>{
-            if(terminal||current!==generation)return;clearTimeout(connectTimer);rejectConnect=null;resolve();
-          }).catch(error=>terminate(error));
+            if(!owns())return;clearTimeout(connectTimer);rejectConnect=null;resolve();
+          }).catch(error=>{if(owns())terminate(error);});
         });
-      }).catch(()=>terminate(Error('Could not authenticate the Hermes connection. Reconnect through the Dashboard.')));
+      }).catch(()=>{if(owns())terminate(Error('Could not authenticate the Hermes connection. Reconnect through the Dashboard.'));});
     });
     return connecting;
   }
@@ -275,7 +275,7 @@ class BookmarkChat {
     if(pollMs)this.timer=setInterval(()=>{if(this.state.busy&&this.runtime&&!this.preparing)this.reconcile();},pollMs);
   }
   valid(epoch){return !this.disposed&&epoch===this.epoch;}
-  patch(values){if(!this.disposed){this.state={...this.state,...values,uncertain:this.uncertain,binding:this.binding};this.onState(this.state);}}
+  patch(values){if(!this.disposed){this.state={...this.state,...values,answering:this.answering?.epoch===this.epoch,uncertain:this.uncertain,binding:this.binding};this.onState(this.state);}}
   params(values){return {profile:this.identity.profile,...values};}
   async data(path,body){const response=await this.api(path,body);if(!response?.ok)throw Error(response?.error?.message||'Bookmarks could not confirm this action.');return response.result;}
   async check(epoch){
@@ -297,7 +297,8 @@ class BookmarkChat {
     if(this.state.busy||this.preparing)throw Error('Wait for the current response or stop it first.');
     const prompt=bookmarkPrompt(text,ids,this.identity.library_id),model=bookmarkModel(selectedModel);
     if(this.binding&&JSON.stringify(model)!==JSON.stringify(this.model))throw Error('Start a new conversation to select a different model.');
-    const epoch=this.epoch;let submitted=false;
+    // Admission invalidates every prior turn's snapshots, failures and cleanup.
+    const epoch=++this.epoch;let submitted=false;
     this.preparing=true;this.patch({busy:true,status:'Preparing conversation',error:'',pending:null});
     try{
       if(!await this.check(epoch))return;
@@ -335,8 +336,11 @@ class BookmarkChat {
   async restore(binding=this.binding){
     if(this.disposed)throw Error('This conversation is closed.');
     if(binding&&(binding.profile!==this.identity.profile||binding.library_id!==this.identity.library_id))throw Error('This conversation belongs to another library or profile.');
-    const epoch=++this.epoch;this.preparing=true;this.streamId=null;
-    this.patch({busy:true,status:'Restoring conversation',error:'',pending:null});
+    const epoch=++this.epoch;this.preparing=true;this.streamId=null;this.reasoningId=null;
+    const changed=binding?.id!==this.binding?.id;
+    // Retire the old event target before any await; plan revisions are per conversation.
+    this.runtime=null;this.transport.setSession(null);
+    this.patch({busy:true,status:'Restoring conversation',error:'',pending:null,plan:null,...(changed?{messages:[]}:{} )});
     try{
       if(!await this.check(epoch))return;
       await this.transport.reconnect?.();
@@ -406,32 +410,38 @@ class BookmarkChat {
     const request=(snapshot.open_requests||[]).find(r=>['approval','clarify'].includes(r.method)&&r.id!=null&&(!r.params?.session_id||r.params.session_id===this.runtime));
     if(!request){this.patch({pending:null});return;}
     const p=request.params||{};
-    if(request.method==='approval')this.patch({status:'Permission needed',pending:{kind:'approval',requestId:request.id,question:p.description||'Allow this action?',details:typeof p.command==='string'?p.command:'',options:(p.choices||['once','deny']).filter(c=>['once','deny'].includes(c))}});
+    if(request.method==='approval')this.patch({status:'Permission needed',pending:{kind:'approval',requestId:request.id,sessionId:this.runtime,epoch:this.epoch,question:p.description||'Allow this action?',details:typeof p.command==='string'?p.command:'',options:(p.choices||['once','deny']).filter(c=>['once','deny'].includes(c))}});
     else{
       const questions=(p.questions||[]).filter(q=>q&&q.qid&&!Object.hasOwn(p.answers||{},q.qid)).slice(0,5);
-      if(questions.length)this.patch({status:'Your answer is needed',pending:{kind:'clarify',requestId:request.id,questions}});
+      if(questions.length)this.patch({status:'Your answer is needed',pending:{kind:'clarify',requestId:request.id,sessionId:this.runtime,epoch:this.epoch,questions}});
     }
   }
-  async respond(value){
-    const pending=this.state.pending,epoch=this.epoch;
-    if(!pending||!this.runtime||this.answering)return;
+  async respond(value,target,questionId){
+    const epoch=this.epoch,pending=target;
+    const matches=()=>{
+      const current=this.state.pending;
+      return this.valid(epoch)&&!!current&&!!target&&current.kind===target.kind&&current.requestId===target.requestId&&target.epoch===epoch&&target.sessionId===this.runtime&&
+        (target.kind==='approval'||(questionId===current.questions?.[0]?.qid&&questionId===target.questions?.[0]?.qid));
+    };
+    if(!matches())throw Error('This decision changed. Review the current request before answering.');
+    if(this.answering?.epoch===epoch)return;
     if(pending.kind==='approval'&&!pending.options.includes(value))throw Error('That permission choice is not available.');
-    this.answering=true;this.patch({answering:true,error:''});
+    const lease={epoch};this.answering=lease;this.patch({error:''});
     try{
-      if(!await this.check(epoch)||this.state.pending?.requestId!==pending.requestId)return;
+      if(!await this.check(epoch)||!matches())return;
       const result=pending.kind==='approval'
         ?await this.transport.request('request.answer',this.params({id:pending.requestId,result:{choice:value}}))
         :await this.transport.request('clarify.lock',this.params({request_id:pending.requestId,question_id:pending.questions[0].qid,answer:value}));
-      if(!this.valid(epoch))return;
+      if(!matches())return;
       if(result.status==='expired'){this.patch({pending:null,error:'This request expired. Your decision was not applied.'});return;}
       const remaining=pending.kind==='clarify'?pending.questions.slice(1).filter(q=>!result.remaining||result.remaining.includes(q.qid)):[];
       this.patch({pending:remaining.length?{...pending,questions:remaining}:null,status:remaining.length?'Your answer is needed':'Hermes is working'});
     }catch(error){if(this.valid(epoch))this.patch({error:'Could not confirm your decision: '+error.message});throw error;}
-    finally{this.answering=false;if(this.valid(epoch))this.patch({answering:false});}
+    finally{if(this.answering===lease){this.answering=null;if(this.valid(epoch))this.patch({});}}
   }
   async reconcile(){
-    if(!this.runtime||this.polling||this.preparing||this.disposed)return;
-    const epoch=this.epoch,runtime=this.runtime;this.polling=true;
+    if(!this.runtime||this.polling?.epoch===this.epoch||this.preparing||this.disposed)return;
+    const epoch=this.epoch,runtime=this.runtime,lease={epoch};this.polling=lease;
     try{
       if(!await this.check(epoch))return;
       const snapshot=await this.transport.request('session.activate',this.params({session_id:runtime,omit_messages:true}));
@@ -446,7 +456,7 @@ class BookmarkChat {
         this.changed();
       }else if(snapshot.running!==true)throw Error('Hermes did not confirm whether the turn is running.');
     }catch(error){if(this.valid(epoch)){this.uncertain=true;this.patch({busy:false,status:'Reconnect needed',error:error.message+' Reconnect before sending again.'});}}
-    finally{this.polling=false;}
+    finally{if(this.polling===lease)this.polling=null;}
   }
   async stop(){
     if(this.disposed)return;
@@ -693,8 +703,8 @@ function createBookmarksWorkspace(React,adapter,components,styles){
       away&&h(Button,{type:'button',onClick:()=>{follow.current=true;setAway(false);if(log.current)log.current.scrollTop=log.current.scrollHeight;}},'Jump to latest'),
       h('div',{className:'hb-chat-status',role:'status'},opening?'Opening conversation…':state.status,state.busy&&h(Button,{type:'button',onClick:()=>controller.current?.stop().catch(()=>{})},'Stop')),
       (state.error||contextError)&&h('div',{className:'hb-chat-error',role:'alert'},h('p',null,state.error||contextError),h(Button,{type:'button',disabled:opening||state.busy,onClick:async()=>{setContextError('');setOpening(true);try{await controller.current?.restore();}catch(error){if(live.current)setContextError(error.message);}finally{if(live.current)setOpening(false);}}},'Reconnect conversation')),
-      pending&&h('section',{className:'hb-chat-decision','aria-label':'Hermes decision'},h('h3',null,pending.kind==='approval'?'Your permission is needed':question?.question||question?.prompt||'Your answer is needed'),pending.kind==='approval'?h(React.Fragment,null,h('p',null,pending.question),pending.details&&h('pre',null,pending.details),h('div',null,h(Button,{type:'button',disabled:state.answering||!pending.options.includes('deny'),onClick:()=>controller.current.respond('deny').catch(()=>{})},'Deny'),h(Button,{type:'button',disabled:state.answering||!pending.options.includes('once'),onClick:()=>controller.current.respond('once').catch(()=>{})},'Allow once'))):h('form',{onSubmit:event=>{event.preventDefault();const value=multi?[...choices,...(answer.trim()?[answer.trim()]:[])]:answer.trim();if(value.length)controller.current.respond(value).catch(()=>{});}},options.map((option,i)=>{const value=typeof option==='string'?option:option.value||option.label;return h(Button,{key:i,type:'button',disabled:state.answering,'aria-pressed':multi?choices.includes(value):undefined,onClick:()=>multi?setChoices(current=>current.includes(value)?current.filter(v=>v!==value):[...current,value]):controller.current.respond(value).catch(()=>{})},typeof option==='string'?option:option.label||option.value);}),h('input',{'aria-label':'Clarification response',value:answer,onChange:event=>setAnswer(event.target.value)}),h(Button,{type:'submit',disabled:state.answering||(!answer.trim()&&!choices.length)},'Send response'))),
-      h('form',{className:'hb-chat-composer',onSubmit:event=>{event.preventDefault();send();}},h('label',{htmlFor:'hb-chat-draft'},'Message Hermes'),h('textarea',{id:'hb-chat-draft',ref:draftRef,'aria-label':'Message Hermes',placeholder:'Ask about what you saved…',value:draft,maxLength:8000,rows:3,onChange:event=>setDraft(event.target.value),onInput:event=>setDraft(event.currentTarget.value),onKeyDown:event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();send();}}}),h('div',null,h('span',null,'Enter to send · Shift + Enter for a new line'),h(Button,{type:'submit',disabled:locked||!!pending||!draft.trim()},'Send'))),
+      pending&&h('section',{className:'hb-chat-decision','aria-label':'Hermes decision'},h('h3',null,pending.kind==='approval'?'Your permission is needed':question?.question||question?.prompt||'Your answer is needed'),pending.kind==='approval'?h(React.Fragment,null,h('p',null,pending.question),pending.details&&h('pre',null,pending.details),h('div',null,h(Button,{type:'button',disabled:state.answering||!pending.options.includes('deny'),onClick:()=>controller.current.respond('deny',pending).catch(()=>{})},'Deny'),h(Button,{type:'button',disabled:state.answering||!pending.options.includes('once'),onClick:()=>controller.current.respond('once',pending).catch(()=>{})},'Allow once'))):h('form',{onSubmit:event=>{event.preventDefault();const value=multi?[...choices,...(answer.trim()?[answer.trim()]:[])]:answer.trim();if(value.length)controller.current.respond(value,pending,question.qid).catch(()=>{});}},options.map((option,i)=>{const value=typeof option==='string'?option:option.value||option.label;return h(Button,{key:i,type:'button',disabled:state.answering,'aria-pressed':multi?choices.includes(value):undefined,onClick:()=>multi?setChoices(current=>current.includes(value)?current.filter(v=>v!==value):[...current,value]):controller.current.respond(value,pending,question.qid).catch(()=>{})},typeof option==='string'?option:option.label||option.value);}),h('input',{'aria-label':'Clarification response',value:answer,onChange:event=>setAnswer(event.target.value)}),h(Button,{type:'submit',disabled:state.answering||(!answer.trim()&&!choices.length)},'Send response'))),
+      h('form',{className:'hb-chat-composer',onSubmit:event=>{event.preventDefault();send();}},h('label',{htmlFor:'hb-chat-draft'},'Message Hermes'),h('textarea',{id:'hb-chat-draft',ref:draftRef,'aria-label':'Message Hermes',disabled:opening,placeholder:'Ask about what you saved…',value:draft,maxLength:8000,rows:3,onChange:event=>setDraft(event.target.value),onInput:event=>setDraft(event.currentTarget.value),onKeyDown:event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();send();}}}),h('div',null,h('span',null,'Enter to send · Shift + Enter for a new line'),h(Button,{type:'submit',disabled:locked||!!pending||!draft.trim()},'Send'))),
       h('p',{className:'hb-chat-hint hb-chat-disclosure'},'Hermes runs this conversation with your profile’s tools and permissions. Provider charges and host retries may apply. Closing this view does not stop a running turn.'));
   }
   return function Workspace({ctx,scope='dashboard'}={}){

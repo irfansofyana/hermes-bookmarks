@@ -37,6 +37,6 @@ The disposable host intentionally has no provider model, `auth.json` or `.env`. 
 
 Connected packaged Desktop acceptance remains blocked: a fresh isolated app user-data directory, Xvfb and the supported remote URL/token override reached matching client/backend version displays but remained behind the Backend offline/connection overlay. No pointer interception bypass, core patch or active-app deployment was attempted. Both emitted Desktop React behavior and scoped gateway adapter tests pass, but are not substitutes for a connected Electron acceptance pass. OAuth and independent-machine topology remain unproven.
 
-The targeted new chat ownership/auth/lifecycle review is still pending at this checkpoint. The previous M1 review is historical and is not being repeated.
+The targeted new chat ownership/auth/lifecycle review is complete: five Important findings were reproduced and fixed in one author-verified RED→GREEN pass. The original report and exact fixes/evidence are in [chat review fixes](in-plugin-chat-review-fixes.md). Final local suite: 86 Python tests on each of 3.14/3.11 and 41 Node tests, plus build/syntax/diff, all passed. The actual Dashboard matrix was rerun with the fixed bundle. This is not independent re-approval or proof of the remaining Desktop/provider/OAuth gates. The previous M1 review stays historical.
 
 No active install, production restart, merge or release was performed. Full v1 collections/notes/import/export/standalone-image/vision/settings milestones remain separate and incomplete.

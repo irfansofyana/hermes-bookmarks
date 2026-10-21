@@ -68,6 +68,22 @@ test('request timeout terminates the connection and does not allow replay on the
  }finally{transport.dispose();}
 });
 
+test('an obsolete SDK auth rejection cannot disconnect a successfully recovered Dashboard socket',async()=>{
+ const f=load(),wire=sockets();let attempts=0,rejectOld;
+ const transport=f.dashboard({buildWsUrl:()=>++attempts===1?new Promise((_resolve,reject)=>rejectOld=reject):Promise.resolve('wss://fixture.invalid/fresh-ticket')},{WebSocket:wire.Socket,connectTimeoutMs:30,heartbeatIntervalMs:0});
+ const disconnects=[];transport.onEvent('transport.disconnected',event=>disconnects.push(event));
+ try{
+  await assert.rejects(transport.request('gateway.ping'),/timed out/i);
+  await transport.reconnect();
+  const healthy=wire.instances[0];assert.equal(healthy.readyState,1);
+  rejectOld(Error('Old authentication failed after recovery'));await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(healthy.readyState,1,'Only the owning connection attempt may terminate the healthy socket');
+  assert.equal(disconnects.length,1);
+  await transport.request('session.history',{profile:'work',session_id:'owned'});
+  assert.equal(attempts,2);
+ }finally{transport.dispose();}
+});
+
 test('Desktop rejects profile/connection drift and disposes only its own subscriptions',async()=>{
  const f=load();let profile='work',connection='backend-A',off=0,close=0,handler;
  const host={state:{profile:{get:()=>profile},connectionId:{get:()=>connection}},request:async(method,params)=>({method,params}),onEvent:(_type,fn)=>{handler=fn;return()=>off++;},close:()=>close++};

@@ -21,7 +21,7 @@ function harness(options={}) {
       assert.equal(params.profile,'work','Every RPC captures its owning profile');
       if(options.rpc){const result=options.rpc(method,params);if(result!==undefined)return await result;}
       if(method==='session.create')return {session_id:'runtime-one',stored_session_id:'stored-one'};
-      if(method==='prompt.submit'){history=[{role:'user',text:params.text}];return {status:'streaming',user_row_id:1};}
+      if(method==='prompt.submit'){running=true;history=[{role:'user',text:params.text}];return {status:'streaming',user_row_id:1};}
       if(method==='session.resume')return {session_id:'runtime-resumed',stored_session_id:'stored-one',messages:history,running,open_requests:[]};
       if(method==='session.activate')return {session_id:params.session_id,running,open_requests:[],todo_state:null};
       if(method==='session.history')return {messages:history};
@@ -41,7 +41,7 @@ function harness(options={}) {
   const chat=new scope.Controller({transport,api,identity:{...identity},pollMs:0,onChange:()=>{changes++;}});
   return {chat,transport,calls,bindings,identity,get changes(){return changes;},
     emit(type,payload={},extra={}){for(const fn of listeners)fn({type,session_id:'runtime-one',profile:'work',payload,...extra});},
-    finish(messages){running=false;history=messages;},listeners};
+    finish(messages){running=false;history=messages;},accept(messages){running=true;history=messages;},get backendRunning(){return running;},listeners};
 }
 const turns=()=>new Promise(resolve=>setImmediate(resolve));
 
@@ -150,13 +150,77 @@ test('only explicit human choices answer the selected session approval/clarifica
   assert.equal(h.chat.state.pending,null);
   h.emit('approval',{id:'approval-1',description:'Run command?',command:'echo synthetic',choices:['once','always','deny']});
   assert.equal(h.calls.filter(c=>c.method==='request.answer').length,0);
-  await assert.rejects(h.chat.respond('always'),/choice|permission/i);
-  await h.chat.respond('deny');
+  await assert.rejects(h.chat.respond('always',h.chat.state.pending),/choice|permission/i);
+  await h.chat.respond('deny',h.chat.state.pending);
   assert.deepEqual(h.calls.at(-1).params,{profile:'work',id:'approval-1',result:{choice:'deny'}});
   h.emit('clarify',{id:'question-1',questions:[{qid:'q1',question:'Which link?',choices:['A','B']}]});
-  await h.chat.respond('A');
+  await h.chat.respond('A',h.chat.state.pending,'q1');
   assert.deepEqual(h.calls.at(-1).params,{profile:'work',request_id:'question-1',question_id:'q1',answer:'A'});
  }finally{h.chat.dispose();}
+});
+
+test('retired decision replies cannot leave or clear a newer conversation decision latch',async()=>{
+ const replies={};let first,second;
+ const h=harness({rpc:(method,params)=>method==='request.answer'?new Promise(resolve=>replies[params.id]=resolve):undefined});
+ try{
+  await h.chat.send('Turn A',[]);h.emit('approval',{id:'approval-A',choices:['once','deny']});
+  first=h.chat.respond('once',h.chat.state.pending);await turns();
+  await h.chat.stop();
+  assert.equal(h.chat.state.answering,false,'Stopping retires the previous decision latch');
+  await h.chat.send('Turn B',[]);h.emit('approval',{id:'approval-B',choices:['once','deny']});
+  second=h.chat.respond('deny',h.chat.state.pending);await turns();
+  assert.equal(typeof replies['approval-B'],'function');
+  replies['approval-A']({status:'ok'});await first;
+  assert.equal(h.chat.state.answering,true,'A late A reply cannot clear B’s pending decision');
+  assert.equal(h.chat.state.pending.requestId,'approval-B');
+  replies['approval-B']({status:'ok'});await second;assert.equal(h.chat.state.answering,false);
+ }finally{for(const reply of Object.values(replies))reply({status:'ok'});h.chat.dispose();await Promise.all([first,second]);}
+});
+
+for(const lostAck of [false,true])test('old reconciliation cannot '+(lostAck?'clear a later uncertain-delivery fence':'erase a later live turn'),async()=>{
+ let hold=false,releaseHistory;
+ const h=harness({rpc:(method,params)=>{
+  if(method==='session.history'&&hold)return new Promise(resolve=>releaseHistory=resolve);
+  if(method==='prompt.submit'&&params.text.endsWith('Turn B')&&lostAck){h.accept([{role:'user',text:'Turn B'}]);throw Error('Lost B acknowledgement');}
+ }});
+ const oldHistory=[{role:'user',text:'Turn A'},{role:'assistant',text:'Answer A'}];
+ try{
+  await h.chat.send('Turn A',[]);h.finish(oldHistory);await h.chat.reconcile();
+  assert.equal(h.chat.state.busy,false);
+  hold=true;h.emit('error',{message:'Late terminal event for A'});await turns();
+  assert.equal(typeof releaseHistory,'function');
+  if(lostAck)await assert.rejects(h.chat.send('Turn B',[]),/Lost B/);else await h.chat.send('Turn B',[]);
+  h.emit('message.delta',{text:'Live B response'});
+  releaseHistory({messages:oldHistory});await turns();
+  assert.equal(h.backendRunning,true);
+  assert.ok(h.chat.state.messages.some(message=>message.text==='Live B response'),'Old A history cannot erase B');
+  assert.equal(h.chat.state.uncertain,lostAck,'Only reconciliation owned by B can clear B uncertainty');
+  if(!lostAck)assert.equal(h.chat.state.busy,true,'B remains running and retains Stop');
+  await assert.rejects(h.chat.send('Turn B',[]),lostAck?/restore|reconnect/i:/wait|response|stop/i);
+  assert.equal(h.calls.filter(call=>call.method==='prompt.submit').length,2);
+ }finally{releaseHistory?.({messages:oldHistory});h.chat.dispose();}
+});
+
+for(const snapshotHasPlan of [false,true])test('restoring another conversation '+(snapshotHasPlan?'accepts its lower plan revision':'clears the prior plan before awaiting history'),async()=>{
+ let release,restoring;
+ const h=harness({rpc:method=>method==='session.resume'?new Promise(resolve=>release=resolve):undefined});
+ const nextPlan={revision:1,todos:[{id:'b',content:'Plan for B',status:'pending'}]};
+ try{
+  await h.chat.send('Turn A',[]);
+  h.emit('todo.updated',{revision:50,todos:[{id:'a',content:'Plan for A',status:'completed'}]});
+  h.finish([{role:'assistant',text:'Answer A'}]);await h.chat.reconcile();
+  restoring=h.chat.restore({id:'thread-b',session_id:'stored-b',profile:'work',library_id:'library-A',model:null});
+  await turns();
+  assert.equal(h.chat.state.plan,null,'Do not display a different conversation plan while restoring');
+  h.emit('todo.updated',{revision:99,todos:[{id:'a',content:'Late A plan',status:'completed'}]});
+  assert.equal(h.chat.state.plan,null,'Detach the previous runtime before the first restore await');
+  release({session_id:'runtime-b',stored_session_id:'stored-b',running:false,messages:[],open_requests:[],todo_state:snapshotHasPlan?nextPlan:null});
+  await restoring;
+  if(!snapshotHasPlan)assert.equal(h.chat.state.plan,null);
+  h.emit('todo.updated',nextPlan,{session_id:'runtime-b'});
+  assert.equal(h.chat.state.plan.revision,1);
+  assert.equal(h.chat.state.plan.todos[0].content,'Plan for B');
+ }finally{release?.({session_id:'runtime-b',stored_session_id:'stored-b',running:false,messages:[],open_requests:[]});h.chat.dispose();await restoring?.catch(()=>{});}
 });
 
 test('disposing drops subscriptions and late creation, but never shuts down Desktop host',async()=>{
