@@ -3,6 +3,9 @@ function createLibrary(React, adapter, components, styles) {
   const Button = components.Button || 'button';
   const Input = components.Input || 'input';
   const view = {query: '', url: '', scroll: 0};
+  function displayHostname(url) {
+    try {return new URL(url).hostname;} catch (_) {return 'Hostname unavailable';}
+  }
   return function Bookmarks({ctx} = {}) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
@@ -59,7 +62,7 @@ function createLibrary(React, adapter, components, styles) {
         if (!payload.ok) throw Error(payload.error.message);
         if (alive.current) {
           if (form.current?.elements.url.value === url) {form.current.elements.url.value = ''; view.url = '';}
-          setNotice('Saved to your library.'); load(query);
+          setNotice('Saved to your library.'); load(view.query);
         }
       } catch (e) {
         if (alive.current) setError('Bookmark save failed. Your URL is preserved; check configuration and try again.');
@@ -121,7 +124,7 @@ function createLibrary(React, adapter, components, styles) {
         h('div', {className: 'hb-item-mark', 'aria-hidden': true}, '↗'),
         h('div', {className: 'hb-item-body'},
           h('a', {href: item.url, target: '_blank', rel: 'noopener noreferrer'}, item.title || item.url),
-          h('p', null, new URL(item.url).hostname)),
+          h('p', null, displayHostname(item.url))),
         h('span', {className: 'hb-item-status'}, ({succeeded:'Summary saved',pending:'Enrichment queued',running:'Enriching…',failed:'Enrichment failed',cancelled:'Cancelled'})[item.enrichment_status] || 'AI not connected'),
         h(Button, {type:'button', disabled:!adapter.chat?.snapshot(), title:'Prepare bookmark references in native Hermes chat', onClick:()=>setAsk({id:item.id,target:adapter.chat.snapshot()})}, 'Ask Hermes')))),
       ask && h('aside', {className:'hb-capture', 'aria-label':'Native chat context'},

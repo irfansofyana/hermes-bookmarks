@@ -4,7 +4,7 @@ A standalone bookmark and image-library plugin for Hermes Desktop, Dashboard, an
 
 **Development preview.** Shared capture/search, durable enrichment jobs, and image attachments are implemented. Real isolated Hermes backend checks pass, and the emitted Dashboard UI has been exercised against that backend in light/dark themes at wide/narrow widths. Full M1 acceptance is still pending: the disposable Desktop app could not finish connecting, Dashboard contextual native-chat handoff is unavailable in the inspected SDK, and no real-model call has been authorized. This is not a v1 release or an approved live deployment.
 
-Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
+Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verification/m1.md), including the [final review fix pass](docs/verification/final-review-fixes.md). The [roadmap](docs/ROADMAP.md) distinguishes working foundations from later release requirements.
 
 ## Working foundation
 
@@ -40,7 +40,7 @@ No active install command is provided for this incomplete preview. Installing th
 
 ## Development and verification
 
-Use an isolated Python environment with `requirements-test.txt` and install the pinned Node development dependencies. Then run:
+Use an isolated Python environment with `requirements-test.txt` and install the pinned Node development dependencies. Node regression tests also execute a standard-library-only Python storage probe; supply `python3` or set `BOOKMARKS_TEST_PYTHON`. Then run:
 
 ```sh
 rtk proxy python -W error -m unittest discover -s tests -q

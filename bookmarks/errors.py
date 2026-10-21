@@ -32,3 +32,7 @@ class NotFoundError(BookmarkError):
 class StorageError(BookmarkError):
     code = "storage_error"
     message = "Library storage is unavailable; check access, database health, and SQLite FTS5 support."
+
+
+class StorageBusyError(StorageError):
+    """Internal retry classification; public code/message remain storage_error."""

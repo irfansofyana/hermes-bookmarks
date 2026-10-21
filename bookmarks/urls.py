@@ -48,6 +48,10 @@ def validate_url(url: str) -> str:
             ascii_host = host.encode("idna").decode("ascii").removesuffix(".")
             if len(ascii_host) > 253 or not all(_DNS_LABEL.fullmatch(label) for label in ascii_host.split(".")):
                 raise ValueError()
+            # Browsers interpret numeric final labels as IPv4, not DNS names.
+            # Accept only strict dotted-decimal notation; never repair identity.
+            if re.fullmatch(r"(?:[0-9]+|0[xX][0-9a-fA-F]*)", ascii_host.rsplit(".", 1)[-1]):
+                ipaddress.IPv4Address(ascii_host)
     except (ValueError, UnicodeError):
         raise InvalidURLError() from None
     return url

@@ -13,15 +13,15 @@ The owner approved subagent-driven execution, then explicitly switched to **hybr
 | 3: native tools/dual-host UI | Locally implemented at `51b1f3c`; initial evidence: `verification/capture.md`; newer real-host checks below. |
 | 4: native handoff | Implemented at `b03c42b`, exact-target/draft/focus tests passed. Connected Desktop acceptance remains blocked; Dashboard contextual handoff is unsupported in the inspected SDK. `verification/native-chat.md`. |
 | 5: jobs/enrichment | `98391e8`, targeted review fixes at `5ea3920`, then actual-host async activation fix in Task 6. Real host consumed an intentionally incomplete job after the initiating request ended; no real model call used. |
-| 6: image/integration | Image slice at `44014f3`; real cold-host auth/image/reopen/native-registry checks and Dashboard visual matrix now exercised. Final whole-branch review remains. M1 is still incomplete because target/model gates are open. |
+| 6: image/integration | Image slice at `44014f3`; real cold-host auth/image/reopen/native-registry checks and Dashboard visual matrix now exercised. Final whole-branch review consumed; all three Important findings fixed in one RED→GREEN pass. Two UI minors are deferred. M1 remains incomplete because target/model gates are open. |
 
-Latest verification: **77 Python tests passed on CPython 3.14.7 and fresh CPython 3.11.14; 10 Node tests passed**. Deterministic bundle, Desktop syntax, whitespace and official plugin validation passed (`ok: true`, no warnings). Nonfatal async slow-callback diagnostics from parallel runs are recorded, not hidden. No remote CI is claimed.
+Latest verification: **82 Python tests passed on CPython 3.14.7 and CPython 3.11.14; 14 Node tests passed**. Deterministic bundle, Desktop syntax, whitespace and official plugin validation passed (`ok: true`, no warnings). Nonfatal async slow-callback diagnostics from parallel runs are recorded, not hidden. No remote CI is claimed.
 
 ## Read next
 
 1. `AGENTS.md`.
 2. `docs/verification/m1.md`: real topology, checks, versions, four Dashboard screenshots and remaining gates.
-3. `docs/verification/enrichment-review-fixes.md`: the three independently found Important issues and controller RED→GREEN fixes. Do not redispatch that targeted review.
+3. `docs/verification/final-review.md` and `final-review-fixes.md`: original independent whole-branch review and the one verified fix pass, remaining minors/rulings. Earlier targeted findings are in `enrichment-review-fixes.md`. Do not redispatch either completed review.
 4. Product spec and `docs/ROADMAP.md` for complete v1 scope.
 5. Active plan: `docs/superpowers/plans/2026-10-20-m1-native-foundation.md`. Local ledger/review artifacts: `.superpowers/sdd/2026-10-20-m1-native-foundation/` (gitignored). Committed verification documents are the portable record; historical documents describe their original snapshots.
 
@@ -31,6 +31,7 @@ Latest verification: **77 Python tests passed on CPython 3.14.7 and fresh CPytho
 - Route fields are `provider`, `model`, `owner_profile`; only the configured owner initializes the persisted route. Library inference is independent from native chat. Hermes owns credentials, provider retries/fallback and trust.
 - Real isolated registration is synchronous and has no running loop. Public async native capture (`is_async=True`) or authenticated async HTTP entry activates `ctx.spawn_task` on the host's persistent async lane. Only the original context's profile may activate it; metadata is lifecycle-owned. No private loop import, ad-hoc loop or sidecar. Startup success is not provider compatibility.
 - Initial owner API activation can resume already accepted automatic capture jobs. GET-only smoke checks do not promise zero background processing. Attachment uploads do not enqueue image analysis.
+- Only SQLite busy/locked failures receive three bounded per-operation attempts; public storage error messages stay sanitized. Lifecycle-owned public task observers record termination. A failed worker can restart only from its original owner’s next async entry after a 30-second monotonic cooldown, not on a background timer. A real host recovered a 7.027-second write lock with the default five-second timeout and no extra API activation.
 - Complete/fail sample lease time after the SQLite write lock. Fresh claim tokens and revisions reject stale applies. Admitted executor work drains before worker termination is acknowledged, including repeated cancellation; cancellation does not instantly stop a thread.
 - Images have owned IDs, bounded decoding and authenticated delivery; no static-files auth bypass or arbitrary path refs. UI JSON transport is public; do not assume binary IPC works in every authentication mode.
 - Shared UI sources emit separate Desktop/Dashboard loaders. Do not hand-edit generated bundles or build custom chat.
@@ -41,11 +42,11 @@ Latest verification: **77 Python tests passed on CPython 3.14.7 and fresh CPytho
 2. Supported Dashboard context/draft handoff, or an explicit owner revision of that target's acceptance. Resume navigation is not equivalent; keep the action unavailable.
 3. Approved real-model text/vision, trust and routing. The real worker probe used incomplete job settings and a non-callable synthetic route; it is not inference evidence.
 4. Independent-machine/OAuth transport and maximum payload checks through every host proxy. Current real authenticated TCP checks are loopback.
-5. Final whole-branch review and blocking fixes. Earlier targeted enrichment review is consumed and its three findings are fixed.
+Code review/fix gates are consumed, not pending. Deferred UI minors: global Retry only reloads rather than resubmitting; narrow layouts hide item status. Both are recorded in `final-review-fixes.md` for the next UI pass, not waived for v1.
 
 ## Next runnable action
 
-Finish the final whole-branch review of the current committed snapshot. Fix Critical/Important findings directly with RED→GREEN regressions and a green full suite; record minors/rulings rather than starting speculative review loops. Preserve the partial-M1 label while gates remain. Do not expand into M2 imports/organization or M3 notes/settings until the M1 outcome is recorded.
+The final whole-branch review and its one fix pass are finished; do not start another speculative review cycle. Resume only the open target-acceptance work: connected isolated Desktop using supported configuration, owner decision on Dashboard handoff, and approved model/remote transport checks. Ask before active deployment or inference. Preserve the partial-M1 label and record the acceptance outcome before expanding into M2–M5.
 
 Use current files/git and the ledger, not checked-box totals or old conversation summaries. Preserve uncommitted work. Keep local review artifacts while target acceptance is unfinished.
 

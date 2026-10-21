@@ -129,6 +129,27 @@ class ServiceTests(unittest.TestCase):
             self.assertNotIn("private-secret", str(caught.exception))
         self.assertEqual(service.search("")["total"], 0)
 
+    def test_invalid_numeric_hosts_are_rejected_without_saving(self):
+        service = BookmarkService(self.root)
+        for url in ('https://256.256.256.256/', 'https://example.123/',
+                    'https://99999999999/', 'https://1.2.3.999/',
+                    'https://0x7f000001/', 'https://127.1/',
+                    'https://0177.0.0.1/'):
+            with self.subTest(url=url), self.assertRaises(ValidationError):
+                service.save_link(url)
+        self.assertEqual(service.search('')['total'], 0)
+        url = 'https://192.0.2.1/path?keep=1#fragment'
+        self.assertEqual(service.save_link(url)['url'], url)
+
+    def test_legacy_numeric_host_remains_readable_after_capture_validation_changes(self):
+        service = BookmarkService(self.root)
+        with service._storage._transaction(write=True) as c:
+            c.execute('INSERT INTO items(id,url,title) VALUES(?,?,?)',
+                      ('legacy', 'https://256.256.256.256/', 'Legacy bookmark'))
+        item = service.get('legacy')
+        self.assertEqual(item['url'], 'https://256.256.256.256/')
+        self.assertEqual(service.search('Legacy')['items'], [item])
+
     def test_url_requires_escaping_for_unsafe_ascii_characters(self):
         service = BookmarkService(self.root)
         for character in ('"', "<", ">", "`", "{", "}", "|", "^"):

@@ -5,7 +5,7 @@ import json
 import sqlite3
 from uuid import uuid4
 
-from .errors import ConfigurationError, NotFoundError, StorageError
+from .errors import ConfigurationError, NotFoundError, StorageError, StorageBusyError
 from .migrations import migrate
 
 
@@ -43,7 +43,10 @@ class Storage:
             except BaseException:
                 connection.rollback()
                 raise
-        except sqlite3.Error:
+        except sqlite3.Error as error:
+            # Extended SQLite busy/locked codes share their primary low byte.
+            if (getattr(error, 'sqlite_errorcode', 0) & 255) in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}:
+                raise StorageBusyError() from None
             raise StorageError() from None
         finally:
             if connection is not None:

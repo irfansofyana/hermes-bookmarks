@@ -3,6 +3,7 @@ import asyncio
 import time
 from uuid import uuid4
 from .jobs import validate_result
+from .errors import StorageError, StorageBusyError
 
 SCHEMA={'type':'object','properties':{'summary':{'type':'string'},'tags':{'type':'array','items':{'type':'string'}}},'required':['summary','tags'],'additionalProperties':False}
 
@@ -46,31 +47,45 @@ async def _storage_call(function,*args,**kwargs):
         raise cancelled
 
 
+async def _retry_storage_call(function,*args,**kwargs):
+    """Retry only SQLite contention, with a bounded budget per operation."""
+    for attempt in range(3):
+        try:
+            return await _storage_call(function,*args,**kwargs)
+        except StorageBusyError:
+            _raise_if_cancelled()
+            if attempt == 2: raise
+            await asyncio.sleep(0.1 * (attempt + 1))
+
+
 async def run_worker(queue,service,llm,fetch,*,poll_seconds:float=1):
     worker_id=str(uuid4())
     while True:
-        await _storage_call(queue.recover_expired)
-        job=await _storage_call(queue.claim,worker_id,lease_seconds=120)
+        await _retry_storage_call(queue.recover_expired)
+        job=await _retry_storage_call(queue.claim,worker_id,lease_seconds=120)
         if job is None:
             await asyncio.sleep(poll_seconds); continue
         try:
             settings=job['settings']
             if not settings.get('provider') or not settings.get('model'):
-                await _storage_call(queue.fail,job['id'],worker_id,'configuration_required',token=job['token']); continue
-            item=await _storage_call(service.get,job['item_id'])
+                await _retry_storage_call(queue.fail,job['id'],worker_id,'configuration_required',token=job['token']); continue
+            item=await _retry_storage_call(service.get,job['item_id'])
             try: text=await fetch(item['url'])
             except asyncio.CancelledError: raise
             except Exception:
-                await _storage_call(queue.fail,job['id'],worker_id,'extraction_failed',token=job['token']); continue
+                await _retry_storage_call(queue.fail,job['id'],worker_id,'extraction_failed',token=job['token']); continue
             _raise_if_cancelled()
             result=await asyncio.wait_for(generate(llm,text,settings,item['url']),timeout=60)
-            await _storage_call(queue.complete,job['id'],worker_id,result,token=job['token'])
+            await _retry_storage_call(queue.complete,job['id'],worker_id,result,token=job['token'])
         except asyncio.CancelledError:
             # In-flight DB work is drained before acknowledgement. Any remaining
             # live claim is recovered after lease expiry; new writes are blocked.
             raise
+        except StorageError:
+            # Do not turn a storage outage into a provider retry or another call.
+            raise
         except Exception:
             if asyncio.current_task().cancelling(): raise
-            await _storage_call(queue.fail,job['id'],worker_id,'provider_failed',token=job['token'])
+            await _retry_storage_call(queue.fail,job['id'],worker_id,'provider_failed',token=job['token'])
         finally:
             if not asyncio.current_task().cancelling(): await asyncio.sleep(poll_seconds)

@@ -2,18 +2,20 @@
 
 No host internals, credentials or profile-local defaults. All participating
 profiles must configure the same absolute settings.library_root. Registration
-publishes only configuration; storage is opened lazily on a user operation.
+publishes explicit settings and supervised worker state; import has no storage
+or inference side effects.
 """
 from pathlib import Path
 from threading import RLock
+from time import monotonic
 import importlib
 import sys
 
 if __package__:
-    from .bookmarks.errors import BookmarkError, ConfigurationError
+    from .bookmarks.errors import BookmarkError, ConfigurationError, StorageError
     from .bookmarks.service import BookmarkService
 else:
-    from bookmarks.errors import BookmarkError, ConfigurationError
+    from bookmarks.errors import BookmarkError, ConfigurationError, StorageError
     from bookmarks.service import BookmarkService
 
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
@@ -21,6 +23,9 @@ _lock = RLock()
 _roots = {}
 _startups = {}
 _contexts = {}
+_workers = {}
+_retry_after = {}
+_RESTART_COOLDOWN = 30
 
 
 def bind_runtime(ctx):
@@ -53,6 +58,8 @@ def bind_runtime(ctx):
             _roots.pop(token, None)
             _startups.pop(token, None)
             _contexts.pop(token, None)
+            _workers.pop(token, None)
+            _retry_after.pop(token, None)
             if not _roots and sys.modules.get(BRIDGE_NAME) is module:
                 sys.modules.pop(BRIDGE_NAME, None)
     cleanup(release)
@@ -67,6 +74,44 @@ def record_startup(token,profile,result):
         if token in _roots: _startups[token]={'profile':profile,'result':result}
 
 
+def _track_worker(token,profile,task):
+    # Task ownership/cancellation stays with ctx.spawn_task. Only observe its
+    # public completion and clear metadata for this exact registration/attempt.
+    with _lock:
+        if token not in _contexts: return
+        _workers[token]=task
+    def finished(completed):
+        if completed.cancelled(): result='worker_stopped'
+        else:
+            error=completed.exception()  # Observe exceptions; never expose text.
+            result='storage_unavailable' if isinstance(error,StorageError) else 'worker_failed' if error is not None else 'worker_stopped'
+        with _lock:
+            if _workers.get(token) is not completed: return
+            _workers.pop(token,None)
+            if token not in _contexts: return
+            record_startup(token,profile,result)
+            _retry_after[token]=monotonic()+_RESTART_COOLDOWN
+    task.add_done_callback(finished)
+
+
+def start_registered_enrichment(token):
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]: return bridge.start_registered_enrichment(token)
+    with _lock:
+        entry=_contexts.get(token)
+        if entry is None: return 'configuration_required'
+        ctx,profile=entry
+        if profile != getattr(ctx,'profile_name','unknown'): return 'not_owner'
+        running=_workers.get(token)
+        if running is not None and not running.done(): return 'started'
+        module=importlib.import_module('.worker_host',__package__) if __package__ else importlib.import_module('worker_host')
+        result=module.start_enrichment(ctx,on_task=lambda task:_track_worker(token,profile,task))
+        record_startup(token,profile,result)
+        if result=='started': _retry_after.pop(token,None)
+        elif result=='storage_unavailable': _retry_after[token]=monotonic()+_RESTART_COOLDOWN
+        return result
+
+
 def ensure_enrichment():
     """Activate only from a host-owned async entry, never create an event loop.
 
@@ -79,9 +124,11 @@ def ensure_enrichment():
     with _lock:
         for token,(ctx,profile) in _contexts.items():
             if profile != getattr(ctx,'profile_name','unknown'): continue
-            if _startups.get(token,{}).get('result')!='host_loop_unavailable': continue
-            module=importlib.import_module('.worker_host',__package__) if __package__ else importlib.import_module('worker_host')
-            record_startup(token,profile,module.start_enrichment(ctx))
+            result=_startups.get(token,{}).get('result')
+            if result!='host_loop_unavailable':
+                if result not in {'storage_unavailable','worker_failed','worker_stopped'}: continue
+                if monotonic() < _retry_after.get(token,0): continue
+            start_registered_enrichment(token)
 
 
 def get_status():
