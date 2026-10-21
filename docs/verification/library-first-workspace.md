@@ -12,7 +12,7 @@ Add/Edit distinguishes personal notes, description and generated summary. Expect
 
 | Requirement | Evidence | Status |
 | --- | --- | --- |
-| Schema upgrade, data preservation, concurrent/failed migration, FK checks | Python migration/storage tests; backend checkpoint | Verified locally; independent boundary review pending |
+| Schema upgrade, data preservation, concurrent/failed migration, FK checks | Python migration/storage tests; backend checkpoint | Verified locally; B1 author fix verified, original review FAIL preserved |
 | Collections/tags/descendant AND queries/counts | Service and strict native/ASGI tests; authenticated real-host smoke | Verified |
 | Notes, revisions, receipts and image associations | Service/API tests; actual browser capture/upload/edit and exact SDK readback | Verified |
 | Real native registration and shared read parity | Actual Hermes plugin manager/model tool registry read of the smoke item, counts, library identity and receipt | Verified; no inference |
@@ -44,7 +44,7 @@ Machine-readable sanitized evidence is in `library-first-workspace.json`. Images
 
 ## Verification checkpoints and review
 
-Backend implementation checkpoint: **144 Python tests on CPython 3.14.7 / 78 Node tests**, all passed after the controller reproduced and fixed the manifest mismatch. Subsequent safety-probe additions passed **146 Python tests on CPython 3.11.14**; current Node suite passed **86 tests**. Final stable-tree dual-runtime gates and one whole-revision independent review are still pending at this checkpoint. These counts deliberately describe separate runs, not a fabricated single final result.
+Backend implementation checkpoint: **144 Python tests on CPython 3.14.7 / 78 Node tests**, all passed after the controller reproduced and fixed the manifest mismatch. Subsequent safety-probe additions passed **146 Python tests on CPython 3.11.14**; current Node suite passed **86 tests**. The independent backend review reported one Important legacy-alias migration defect (quality/security FAIL, backend-spec FAIL for `4fc4bab`), now reproduced and fixed by the author: [original report](library-first-backend-review.md), [RED/GREEN fix](library-first-backend-review-fix.md). The fixed tree passed **147 Python tests on each runtime and 86 Node tests**, with a stable fingerprint and deterministic build/syntax/diff checks. Final integrated independent review remains pending; no independent re-approval of the author fix is claimed.
 
 Official CLI validation in a disposable environment returned `ok: true`, `host_ready: true`, matching fifteen declared tools and no core override. It retains two disclosed `inline_shell_exec` scanner cautions in bundled Marked code-span regex source (`index.js:54`, `plugin.js:52`); the scanner did not report executed shell commands. Existing async slow-callback diagnostics remain visible during lock tests.
 

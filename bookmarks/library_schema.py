@@ -17,8 +17,6 @@ def upgrade_library(connection):
             if not isinstance(values, list) or len(values) > 20:
                 raise ValueError()
             normalized = [(value, *normalize_label(value, 80)) for value in values]
-            if len({key for _, _, key in normalized}) != len(values):
-                raise ValueError()
             labels[row['id']] = normalized
     except (ValueError, TypeError, ValidationError):
         raise StorageError() from None
@@ -81,9 +79,12 @@ def upgrade_library(connection):
         for original, display, key in values:
             connection.execute('INSERT INTO tags(id,label,identity) VALUES(?,?,?) ON CONFLICT(identity) DO NOTHING', (uuid4().hex, display, key))
             tag = connection.execute('SELECT id FROM tags WHERE identity=?', (key,)).fetchone()[0]
-            # Association-local spelling avoids rewriting legacy labels when
-            # multiple items share one NFC/casefold identity.
-            connection.execute('INSERT INTO item_tags(item_id,tag_id,generated,label) VALUES(?,?,1,?)', (item_id,tag,original))
+            # V5 accepted aliases within one item. Keep its original tags JSON
+            # untouched, while one normalized membership uses the first label.
+            # Metadata-only edits retain that cache; an explicit tag change or
+            # generated replacement rebuilds it under the new identity rules.
+            connection.execute('''INSERT INTO item_tags(item_id,tag_id,generated,label) VALUES(?,?,1,?)
+                ON CONFLICT(item_id,tag_id) DO NOTHING''', (item_id,tag,original))
     columns = ('title','url','description','notes','summary','tags')
     names = ','.join(columns)
     connection.execute("CREATE VIRTUAL TABLE items_fts USING fts5(" + names + ",content='items',content_rowid='rowid',tokenize='unicode61')")

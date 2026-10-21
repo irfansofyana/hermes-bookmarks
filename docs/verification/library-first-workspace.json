@@ -311,5 +311,5 @@
   "provider_inference": false,
   "connected_electron_verified": false,
   "oauth_independent_machine_verified": false,
-  "review_status": "boundary and final revision pending"
+  "review_status": "boundary FAIL on reviewed snapshot; B1 author fix verified; final revision pending"
 }

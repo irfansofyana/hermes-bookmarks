@@ -1,4 +1,5 @@
 from contextlib import closing
+import json
 import multiprocessing
 from pathlib import Path
 import sqlite3
@@ -46,7 +47,7 @@ class LibraryMigrationTests(unittest.TestCase):
         self.assertEqual(service.search('title:Legacy')['total'],0)
 
     def test_invalid_legacy_tags_rollback_every_ddl(self):
-        for tags in ('not-json','{}','[3]','["bad\\u0000tag"]','["AI","ai"]'):
+        for tags in ('not-json','{}','[3]','["bad\\u0000tag"]','["bad\\ud800"]'):
             with self.subTest(tags=tags):
                 with closing(sqlite3.connect(self.root/'bookmarks.sqlite3')) as c, c:
                     c.execute('UPDATE items SET tags=?',(tags,))
@@ -85,7 +86,33 @@ class LibraryMigrationTests(unittest.TestCase):
                 c.execute("UPDATE items SET collection_id='missing'")
         self.assertIsNone(service.get('legacy')['collection_id'])
 
+    def test_baseline_accepted_aliases_preserve_original_labels_and_normalize_membership(self):
+        # These exact outputs were accepted through the pinned v5 JobQueue.complete,
+        # not corrupt rows: v5 deduplicated exact strings, not Unicode identities.
+        for number, labels in enumerate((['AI','ai'],['Café','Cafe\u0301'],['reading',' reading '])):
+            with self.subTest(labels=labels):
+                root=self.root/str(number);root.mkdir()
+                frozen_v5(root,tags=json.dumps(labels,ensure_ascii=False))
+                service=BookmarkService(root);item=service.get('legacy')
+                self.assertEqual(item['tags'],labels)
+                self.assertEqual(item['tag_details'],[{'name':labels[0],'source':'generated'}])
+                self.assertEqual(service.search(tags=[labels[-1]])['total'],1)
+                self.assertEqual(service.tag_list()['total'],1)
+                self.assertEqual(service.tag_list()['tags'][0]['count'],1)
+                updated=service.note_update('legacy',item['revision'],'Alias-safe metadata edit')
+                self.assertEqual(updated['tags'],labels)
+                self.assertEqual(BookmarkService(root).get('legacy')['tags'],labels)
+                with service._storage._transaction() as c:
+                    self.assertEqual(c.execute('SELECT count(*) FROM item_tags').fetchone()[0],1)
+                    self.assertEqual(c.execute('PRAGMA foreign_key_check').fetchall(),[])
+                    self.assertEqual(c.execute('PRAGMA integrity_check').fetchone()[0],'ok')
+                removed=service.update('legacy',updated['revision'],{'remove_tags':[labels[-1]]})
+                self.assertEqual(removed['tags'],[])
+                self.assertEqual(service.tag_list()['total'],0)
+
     def test_populated_concurrent_migrators(self):
+        with closing(sqlite3.connect(self.root/'bookmarks.sqlite3')) as c,c:
+            c.execute('UPDATE items SET tags=?',(json.dumps(['AI','ai','Café','Cafe\u0301','reading',' reading ']),))
         context=multiprocessing.get_context('spawn'); output=context.Queue()
         processes=[context.Process(target=upgrade,args=(str(self.root),output)) for _ in range(3)]
         try:
