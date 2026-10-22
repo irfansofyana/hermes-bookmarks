@@ -101,6 +101,22 @@ for(const target of ['desktop','dashboard']){
   finally{await app.close();}
  });
 }
+for(const boundary of ['profile','connection'])test('Desktop: returning to '+boundary+' before admitted completion refreshes only its remounted owner',async()=>{
+ let rows=['a','b'].map(base),release,writes=0;
+ const app=await mount('desktop',{overrideApi:(route,init)=>{
+  if(route.startsWith('/items?'))return {ok:true,result:{items:rows.map(row=>({...row})),total:2,offset:0,limit:50}};
+  if(/^\/items\/[ab]$/.test(route))return {ok:true,result:{...rows.find(row=>row.id===route.split('/').at(-1))}};
+  if(route.endsWith('/update')){writes++;return new Promise(resolve=>release=()=>{rows=rows.map(row=>row.id==='a'?{...row,favorite:true,revision:4}:row);resolve({ok:true,result:{...rows[0]}});});}
+ }});
+ try{await select(app);await click(button(app,'Apply to 2 items'),app);
+  await app.setScope(boundary==='profile'?{profile:'personal'}:{connection:'backend-b'});
+  await app.setScope(boundary==='profile'?{profile:'work'}:{connection:'fixture-backend'});
+  await click(button(app,'Edit selection'),app);assert.ok(button(app,'Mark favorite Fixture a'));const reads=app.apiCalls.filter(x=>x.route.startsWith('/items?')).length;
+  await React.act(async()=>release());await flush();assert.equal(writes,1);assert.match(app.element.textContent,/Applied: 1/);assert.match(app.element.textContent,/Not processed: 1/);
+  assert.ok(app.apiCalls.filter(x=>x.route.startsWith('/items?')).length>reads,'Returning owner must refresh after acknowledged change');
+  await click(button(app,'Close bulk actions'),app);assert.ok(button(app,'Remove favorite Fixture a'));
+ }finally{release?.();await app.close();}
+});
 test('Desktop: switching backend during a batch stops dispatch and cannot refresh replacement library',async()=>{
  const rows=['a','b'].map(base);let release,writes=0;
  const app=await mount('desktop',{overrideApi:(route,init)=>{

@@ -18,7 +18,7 @@ New emitted-client tests: 23 selection cases (both hosts plus Desktop backend sw
 
 Official isolated `plugins validate` passed: registration inventory, no collisions/core overrides and supported Desktop surface. Two known scanner cautions on bundled Marked JavaScript regex syntax remain (`inline_shell_exec`), not shell execution. Host isolation is not a security sandbox.
 
-Final independent UX review dispatched as `deleg_24791731` at the exact snapshot above. Result pending; no independent final approval or exact-head remote CI is claimed by this document. The earlier import slice's exact-head push and PR runs at `a31b5be` were both read back successful before this work; they are not CI for UX.
+Final independent UX review `deleg_24791731` returned REQUEST CHANGES: one Important refresh defect and one minor Unicode limit mismatch. Important was reproduced and fixed; final gates **184 Python each on 3.11/3.14; 167 Node** pass. [Original](ux-polish-final-review.md) and [author fix/deferred minor](ux-polish-review-fixes.md). No independent re-approval or exact-head remote CI is claimed by this document. The earlier import slice's exact-head push and PR runs at `a31b5be` were both read back successful before this work; they are not CI for UX.
 
 ## Actual Dashboard/public SDK
 

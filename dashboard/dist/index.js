@@ -846,7 +846,7 @@ function createLibraryImport(React,adapter,components){
 const bookmarkBulkReports=new Map();
 function createLibraryBulk(React,adapter,components){
  const {createElement:h,useRef,useState,useEffect}=React,Button=components.Button||'button',Dialog=createLibraryDialog(React,components);
- const fresh=()=>({phase:'idle',action:'favorite_on',tags:'',collection:null,rows:[],error:'',stop:false,acknowledged:false,listeners:new Set()});
+ const fresh=()=>({phase:'idle',completion:0,action:'favorite_on',tags:'',collection:null,rows:[],error:'',stop:false,acknowledged:false,listeners:new Set()});
  const actions=[['favorite_on','Add to Favorites'],['favorite_off','Remove from Favorites'],['read_later_on','Mark Read later'],['read_later_off','Remove Read later'],['move','Move to collection'],['add_tags','Add tags'],['remove_tags','Remove tags'],['trash','Move to Trash'],['restore','Restore from Trash']];
  function tags(text){
   const result=[];let label='',quoted=false;
@@ -863,7 +863,7 @@ function createLibraryBulk(React,adapter,components){
   const owned=(route,init)=>bookmarkOwnedRequest(adapter,ctx,scope,route,init);
   const current=()=>alive.current&&(!adapter.currentScope||adapter.currentScope()===scope);
   const changed=()=>bookmarkDraftChanged(state);
-  useEffect(()=>{alive.current=true;const listener=()=>{if(current())paint(n=>n+1);};state.listeners.add(listener);return()=>{alive.current=false;state.stop=true;state.listeners.delete(listener);};},[]);
+  useEffect(()=>{alive.current=true;let completion=state.completion;const listener=()=>{if(!current())return;paint(n=>n+1);if(completion!==state.completion){completion=state.completion;callbacks.current.onChanged();}};state.listeners.add(listener);return()=>{alive.current=false;state.stop=true;state.listeners.delete(listener);};},[]);
   async function review(){
    if(['loading','running'].includes(state.phase))return;
    const selected=[...new Set(callbacks.current.ids)];if(!selected.length||selected.length>100){state.error='Choose between 1 and 100 items. No changes were sent.';changed();return;}
@@ -911,7 +911,7 @@ function createLibraryBulk(React,adapter,components){
     changed();
    }
    for(const row of state.rows)if(row.status==='ready')row.status='not_processed';
-   state.phase='done';changed();if(current())callbacks.current.onChanged();
+   state.phase='done';state.completion++;changed();
   }
   function close(){
    if(['loading','running'].includes(state.phase)){state.stop=true;state.error='Stopping after the current request. Already accepted changes are kept.';changed();return;}
