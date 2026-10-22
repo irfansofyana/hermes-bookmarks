@@ -28,6 +28,8 @@ async function run({chromium,baseURL,outputDir,allowWrite=false}){
    await button('Preview import').click();await button('Start import').waitFor();
    for(const width of [1440,390]){
     await page.setViewportSize({width,height:1100});
+    // Wait for the host's responsive layout/portal transition, not just viewport acknowledgement.
+    await page.waitForFunction(()=>{const el=document.querySelector('[role="dialog"]');if(!el)return false;const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;},null,{timeout:5000});
     const facts=await dialog.evaluate(el=>({width:el.clientWidth,visible_left:el.getBoundingClientRect().left,visible_right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth,document_overflow:document.documentElement.scrollWidth>innerWidth}));assert.equal(facts.overflow||facts.document_overflow,false);assert.ok(facts.visible_left>=0&&facts.visible_right<=width,'Dialog must fit viewport');
     for(const key of ['Tab','Shift+Tab'])for(let i=0;i<5;i++){await page.keyboard.press(key);assert.equal(await dialog.evaluate(el=>el.contains(document.activeElement)),true);}
     const file=`bookmarks-import-${theme}-${width}.png`;await page.screenshot({path:path.join(outputDir,file)});rows.push({check:'import_preview_visual_focus',theme,viewport:width,file,...facts});

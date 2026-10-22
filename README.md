@@ -13,6 +13,7 @@ Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verificat
 - Individual link captures enqueue durable enrichment jobs. The configured owner profile uses the host's supervised task and LLM facade; leases, fresh claim tokens, revisions, retries and cancellation protect persistence. Saved bookmarks do not depend on model success.
 - Bounded PNG/JPEG/WebP images with backend-owned IDs, authenticated delivery, previews, standalone image items and item attachments. Standalone image analysis and inline note embeds remain unavailable.
 - Library-first browsing offers nested collections, whole-library counts, tags and AND filters, grid/list views and pagination. Add/Edit dialogs keep description, personal Markdown notes and AI summaries separate. Stale revisions reject without overwriting; uncertain captures are reconciled using their original operation key.
+- Recoverable Trash keeps notes/assets and rejects stale revisions. Normalized JSON records and Netscape bookmark HTML support immutable preview, explicit Start, accurate durable results, cancellation, and job-ID inspection after reload. Imports skip existing (including trashed) URLs and default to **no AI enrichment**. Supported source metadata is separate from generated summaries; unsupported fields are warned, not silently claimed as preserved.
 - Shared React source emits separate Desktop ESM and Dashboard bundles. Styling follows each host's active theme.
 - Chat is initially closed and opens explicitly. Collapse preserves session, draft and running output; Stop is a separate action. A plugin-owned conversation panel stays alongside the library (or in the in-plugin Chat view on narrow screens), backed by dedicated Hermes-managed sessions. It supports explicit Send, streaming, safe Markdown, tool summaries, real plans, approvals/clarification, Stop, model choice for new conversations and profile-scoped history. This replaces the legacy draft handoff; no ordinary focused chat is adopted. See [chat verification](docs/verification/in-plugin-chat.md) for current evidence and remaining host gates.
 
@@ -35,6 +36,11 @@ Start with [development status](docs/STATUS.md) and [M1 evidence](docs/verificat
 | `bookmark_tag_list` | Page normalized effective tags with whole-library counts |
 | `bookmark_library_identity` | Read the installation-owned shared library identity |
 | `bookmark_counts` | Read All, Inbox, Favorites and Read later counts |
+| `bookmark_delete` / `bookmark_restore` | Revision-checked recoverable trash/restore |
+| `bookmark_import_preview` | Validate supplied normalized records or bookmark HTML without writing items |
+| `bookmark_import_start` | Admit an immutable preview using its digest and a stable request ID |
+| `bookmark_import_request_get` | Read admission by request ID without replaying a write |
+| `bookmark_job_get` / `bookmark_job_cancel` | Inspect durable import results or cancel remaining rows |
 
 Native tools are registered through Hermes's public async lane. Owner capture and authenticated async API entry can activate the supervised worker after synchronous registration; the plugin never creates an event loop or a persistent sidecar. The worker survives request completion and is not owned by a browser tab. Missing configuration or capabilities are reported separately from saved-item success.
 
@@ -67,7 +73,7 @@ The `ui/` library/chat JavaScript and scoped CSS files are sources; run `rtk pro
 
 ## Product direction and remaining milestones
 
-The intended v1 includes Raindrop-inspired grid/list organization, nested collections, tags, favorites/read-later, rich notes with inline images, standalone image items, configuration controls, import and export, and native agent workflows. Bulk imports default to no enrichment unless explicitly opted in; note images are not automatically analyzed. The organization workspace, standalone image records and Markdown notes are implemented in this revision. Rich-text/inline images, visual AI, settings, trash/restore, import/export and all-target acceptance remain on the roadmap.
+The intended v1 includes Raindrop-inspired grid/list organization, nested collections, tags, favorites/read-later, rich notes with inline images, standalone image items, configuration controls, import and export, and native agent workflows. Bulk imports default to no enrichment unless explicitly opted in; note images are not automatically analyzed. The organization workspace, standalone image records and Markdown notes are implemented in this revision. Recoverable trash and normalized/HTML imports are implemented; [trash/import verification](docs/verification/trash-and-imports.md) records real-host/browser/restart evidence and limits. Rich-text/inline images, visual AI, settings, HTML/lossless export/restore and all-target acceptance remain on the roadmap.
 
 Read the [specification](docs/superpowers/specs/2026-10-20-hermes-bookmarks-design.md), [roadmap](docs/ROADMAP.md), and [M1 plan](docs/superpowers/plans/2026-10-20-m1-native-foundation.md). Future sessions start with [AGENTS.md](AGENTS.md) and [STATUS](docs/STATUS.md), not with old conversation summaries.
 

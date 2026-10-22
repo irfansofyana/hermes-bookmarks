@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "actual_native_registry": true,
+  "tools_exercised": [
+    "bookmark_import_preview",
+    "bookmark_import_start",
+    "bookmark_import_request_get",
+    "bookmark_job_get",
+    "bookmark_job_cancel",
+    "bookmark_delete",
+    "bookmark_restore",
+    "bookmark_get"
+  ],
+  "job_id": "c850919fbe314c7aa06db560b08d0ba5",
+  "item_id": "b3d17691-1068-4017-be05-3bb51f60cfce",
+  "provider_calls": false
+}

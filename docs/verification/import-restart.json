@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "actual_host": true,
+  "mode": "reopen",
+  "checks": [
+    {
+      "check": "unauthorized_import_read",
+      "ok": true
+    },
+    {
+      "check": "unauthorized_import_write",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "http_/items/53598b1d-eb6a-4f40-8e43-135a978c5142",
+      "ok": true
+    },
+    {
+      "check": "restart_report_persists",
+      "ok": true
+    },
+    {
+      "check": "restart_notes_provenance_persist",
+      "ok": true
+    }
+  ],
+  "job_id": "4555f5cbb5fb4cbc9e13d03eaf69ce48",
+  "item_id": "53598b1d-eb6a-4f40-8e43-135a978c5142",
+  "provider_calls": false
+}
