@@ -47,6 +47,6 @@ All disposable servers used here were stopped; both previously owned listener po
 
 ## Review and remaining gates
 
-The targeted immutable backend review `c1abe3c..ebbf973` returned no concrete Important/Critical defect. Preserve its limited scope in [backend disposition](trash-import-backend-review.md); it excluded later HTML/API/UI. A separate final milestone review was dispatched at `775cfa855c474a6a07adf3ff2f07e960e477ead9` and is pending consumption. No final independent approval or exact-head publication is claimed here yet.
+The targeted immutable backend review `c1abe3c..ebbf973` returned no concrete Important/Critical defect. Preserve its limited scope in [backend disposition](trash-import-backend-review.md); it excluded later HTML/API/UI. The separate final milestone review at `775cfa855c474a6a07adf3ff2f07e960e477ead9` returned **changes requested**, three Important and no Critical. See [unaltered original](trash-import-final-review.md) and [author fix pass](trash-import-final-fixes.md). No final independent approval or exact-head publication is claimed here yet.
 
 Connected packaged Electron, physical/remote-machine and OAuth proxy acceptance remain open. The emitted Desktop React tests are not a substitute. Real text/vision tests are approved but not performed in this slice. Export/lossless restore, full settings and image analysis, rich-text/inline-note images, bulk polish and final release gates remain required future work; imports do not remove export.
