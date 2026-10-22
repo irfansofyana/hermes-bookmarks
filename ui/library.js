@@ -1,12 +1,13 @@
 function createLibrary(React,adapter,components,styles){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
  const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components);
- const Dialog=createLibraryDialog(React,components);
+ const Dialog=createLibraryDialog(React,components),Import=createLibraryImport(React,adapter,components);
  const defaults=()=>({query:'',view:'all',collectionId:null,tags:[],limit:50,offset:0,mode:'grid',selectedIds:[],scroll:0});
  return function Bookmarks({ctx,scope='dashboard',onAsk,onReady}={}){
   const [libraryId,setLibraryId]=useState(null),[query,setQuery]=useState(defaults),[page,setPage]=useState({items:[],total:0}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [form,setForm]=useState(null),[detail,setDetail]=useState(null),[revision,setRevision]=useState(0),[drawer,setDrawer]=useState(false),[search,setSearch]=useState(''),[identityRetry,setIdentityRetry]=useState(0),[narrow,setNarrow]=useState(false);
   const libraryRoot=useRef(null);
+  const [importOpen,setImportOpen]=useState(false);
   const [trashTarget,setTrashTarget]=useState(null),[trashBusy,setTrashBusy]=useState(false),[undoTrash,setUndoTrash]=useState(null);const trashLock=useRef(false);
   useEffect(()=>{if(typeof ResizeObserver==='undefined'||!libraryRoot.current)return;const observer=new ResizeObserver(entries=>{if(entries[0])setNarrow(entries[0].contentRect.width<=680);});observer.observe(libraryRoot.current.closest('.hb-workspace-frame')||libraryRoot.current);return()=>observer.disconnect();},[]);
   const live=useRef(true),generation=useRef(0),current=useRef(null),surface=useRef(null),restored=useRef(false),selectedItems=useRef(new Map()),updating=useRef(new Set());
@@ -54,6 +55,7 @@ function createLibrary(React,adapter,components,styles){
   return h('section',{ref:libraryRoot,className:'hb-library','aria-label':'Bookmarks'},
    h('div',{className:'hb-library-topbar'},h(Button,{type:'button','aria-label':'Toggle library navigation','aria-expanded':drawer,onClick:()=>setDrawer(open=>!open)},'☰'),
     h('form',{className:'hb-search',onSubmit:event=>{event.preventDefault();change({query:search});}},h(Input,{type:'search',name:'query','aria-label':'Search bookmarks',value:search,placeholder:'Search your library…',onChange:event=>setSearch(event.target.value),onInput:event=>setSearch(event.currentTarget.value)}),h(Button,{type:'submit'},'Search')),
+    h(Button,{type:'button',disabled:!libraryId,onClick:()=>setImportOpen(true)},'Import'),
     h(Button,{type:'button',className:'hb-primary',disabled:!libraryId,onClick:()=>{setDetail(null);setForm({item:null});}},'Add')),
    error&&h('div',{role:'alert',className:'hb-error'},error,h(Button,{type:'button',onClick:refresh},'Retry library')),
    notice&&h('p',{role:'status',className:'hb-notice'},notice,undoTrash&&h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(undoTrash,true)},'Undo trash')),
@@ -67,6 +69,7 @@ function createLibrary(React,adapter,components,styles){
      !loading&&!page.items.length&&h('div',{className:'hb-empty'},h('h2',null,query.query||query.tags.length?'No matching items':'Nothing here yet'),h('p',null,'Save something worth keeping, or try a different filter.')),
      h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,onTrash:item=>item.deleted_at?trashChange(item,true):setTrashTarget(item),selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
 
+   libraryId&&h(Import,{key:JSON.stringify([scope,libraryId]),ctx,scope,libraryId,open:importOpen,onClose:()=>setImportOpen(false),onChanged:refresh}),
    trashTarget&&h(Dialog,{title:'Move to trash?',description:'Notes and images are kept. You can restore this item later.',onCloseRequest:()=>{if(!trashBusy)setTrashTarget(null);}},h('p',null,bookmarkItemName(trashTarget)),h(Button,{type:'button',disabled:trashBusy,onClick:()=>setTrashTarget(null)},'Cancel'),h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(trashTarget)},trashBusy?'Moving…':'Move to trash')),
    form&&h(Form,{key:form.item?JSON.stringify([form.item.id,form.item.revision]):'new',ctx,scope,libraryId,item:form.item,defaultCollection:query.collectionId,onSaved:saved,onClose:()=>setForm(null)}),
    detail&&!form&&h(Detail,{key:detail,ctx,scope,libraryId,itemId:detail,onEdit:item=>{setDetail(null);setForm({item});},onAsk,onClose:()=>setDetail(null)}));

@@ -788,15 +788,62 @@ function createLibraryItems(React,adapter,components){
  };
 }
 
+const bookmarkImportDrafts=new Map();
+function createLibraryImport(React,adapter,components){
+ const {createElement:h,useRef,useState,useEffect}=React,Button=components.Button||'button',Dialog=createLibraryDialog(React,components);
+ const fresh=()=>({source:'',format:'records',enrich:false,preview:null,request:null,job:null,error:'',busy:false,uncertain:false,confirm:false,epoch:0,listeners:new Set()});
+ return function LibraryImport({ctx,scope,libraryId,open,onClose,onChanged}){
+  const key=JSON.stringify([scope,libraryId]);if(!bookmarkImportDrafts.has(key))bookmarkImportDrafts.set(key,fresh());
+  const alive=useRef(true);
+  const state=useRef(bookmarkImportDrafts.get(key)).current,[,paint]=useState(0),callbacks=useRef(null);callbacks.current={onClose,onChanged};
+  const changed=()=>bookmarkDraftChanged(state);
+  const refresh=()=>{if(alive.current&&(!adapter.currentScope||adapter.currentScope()===scope))callbacks.current.onChanged();};
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+  useEffect(()=>{const listener=()=>{if(!adapter.currentScope||adapter.currentScope()===scope)paint(n=>n+1);};state.listeners.add(listener);return()=>state.listeners.delete(listener);},[scope,libraryId]);
+  const owned=(route,init)=>bookmarkOwnedRequest(adapter,ctx,scope,route,init);
+  function accept(job){const prior=state.job;state.job=job;state.uncertain=false;state.error=job.state==='failed'?'Import failed: '+(job.error||'storage unavailable'):'';changed();if(!prior||prior.processed!==job.processed)for(const listener of state.listeners)listener();}
+  async function inspect(){if(state.busy||!state.job)return;state.busy=true;changed();try{accept((await owned('/imports/'+encodeURIComponent(state.job.id))).result);refresh();}catch(error){state.error=error.message;}finally{state.busy=false;changed();}}
+  useEffect(()=>{if(!state.job||!['pending','running'].includes(state.job.state))return;const timer=setInterval(()=>{inspect().catch(()=>{});},1500);return()=>clearInterval(timer);},[state.job?.id,state.job?.state]);
+  function source(value){if(state.busy||state.uncertain||state.job)return;state.source=value;state.preview=null;state.request=null;state.error='';changed();}
+  async function file(event){const file=event.currentTarget.files?.[0];if(!file||state.busy||state.job||state.uncertain)return;const epoch=state.epoch;state.busy=true;changed();try{if(file.size>2*1024*1024)throw Error('Import source exceeds 2 MiB.');const text=await file.text();if(epoch!==state.epoch)return;state.source=text;state.format=/\.html?$/i.test(file.name)?'html':'records';state.preview=null;state.request=null;}catch(error){if(epoch===state.epoch)state.error=error.message;}finally{if(epoch===state.epoch){state.busy=false;changed();}}}
+  async function preview(){if(state.busy||state.uncertain||state.job)return;const epoch=state.epoch;state.busy=true;state.error='';changed();try{const body={options:{duplicate_policy:'skip_existing',enrich:state.enrich}};if(state.format==='html')body.html=state.source;else body.records=JSON.parse(state.source);const result=(await owned('/imports/preview',{method:'POST',body})).result;if(epoch!==state.epoch)return;state.preview=result;state.request=null;}catch(error){if(epoch===state.epoch)state.error=error.message;}finally{if(epoch===state.epoch){state.busy=false;changed();}}}
+  async function start(){if(state.busy||state.uncertain||!state.preview||state.job)return;state.busy=true;state.error='';if(!state.request)state.request={preview_id:state.preview.preview_id,input_digest:state.preview.input_digest,request_id:crypto.randomUUID()};changed();try{accept((await owned('/imports/start',{method:'POST',body:state.request})).result);refresh();}catch(error){state.uncertain=!['invalid_argument','not_found','conflict','configuration_error'].includes(error.code);state.error=state.uncertain?'Import start outcome is uncertain. Check accepted import before retrying.':error.message;}finally{state.busy=false;changed();}}
+  async function reconcile(){if(state.busy||!state.request)return;state.busy=true;changed();try{accept((await owned('/imports/requests/'+encodeURIComponent(state.request.request_id))).result);refresh();}catch(error){state.error=error.code==='not_found'?'No accepted import found yet. Check again, or explicitly retry the same frozen request.':error.message;}finally{state.busy=false;changed();}}
+  async function cancel(){if(state.busy||!state.job)return;state.busy=true;changed();try{accept((await owned('/imports/'+encodeURIComponent(state.job.id)+'/cancel',{method:'POST',body:{}})).result);refresh();}catch(error){state.error=error.message;}finally{state.busy=false;changed();}}
+  function close(){if(state.busy&&state.request){callbacks.current.onClose();return;}if(state.uncertain){callbacks.current.onClose();return;}if(!state.job&&(state.source||state.busy)){state.confirm=true;changed();return;}callbacks.current.onClose();}
+  function reset(){const listeners=state.listeners,epoch=state.epoch+1;Object.assign(state,fresh(),{listeners,epoch});changed();}
+  if(!open)return null;
+  const locked=state.busy||state.uncertain||!!state.job;
+  return h(Dialog,{title:'Import bookmarks',description:'Preview supplied records or bookmark HTML. Existing URLs are skipped; source files are never changed.',onCloseRequest:close},
+   state.confirm?h('section',null,h('p',null,'Discard this import source draft?'),h(Button,{type:'button',onClick:()=>{state.confirm=false;changed();}},'Keep editing'),h(Button,{type:'button',onClick:()=>{reset();callbacks.current.onClose();}},'Discard import')):
+   h('section',{className:'hb-item-form'},
+    !state.job&&h(React.Fragment,null,h('label',{className:'hb-field'},'Source format',h('select',{'aria-label':'Import format',value:state.format,disabled:locked,onChange:event=>{state.format=event.target.value;state.preview=null;state.request=null;changed();}},h('option',{value:'records'},'Normalized records (JSON)'),h('option',{value:'html'},'Bookmark HTML'))),
+     h('label',{className:'hb-field'},'Select a source file',h('input',{type:'file',accept:'.json,.html,.htm',disabled:locked,'aria-label':'Import file',onChange:file})),
+     h('label',{className:'hb-field'},'Import source',h('textarea',{'aria-label':'Import source',rows:8,value:state.source,disabled:locked,onChange:event=>source(event.target.value),onInput:event=>source(event.currentTarget.value)})),
+     h('label',null,h('input',{type:'checkbox','aria-label':'Enrich imported links',checked:state.enrich,disabled:locked,onChange:event=>{state.enrich=event.target.checked;state.preview=null;state.request=null;changed();}}),' Enrich imported links (opt-in; provider charges may apply)'),
+     h(Button,{type:'button',disabled:locked||!state.source.trim(),onClick:preview},'Preview import')),
+    state.preview&&!state.job&&h('section',{'aria-label':'Import preview'},h('p',null,`Total: ${state.preview.total} · New: ${state.preview.valid} · Invalid: ${state.preview.invalid} · Existing: ${state.preview.existing} · Batch duplicates: ${state.preview.duplicate_in_batch}`),
+     h('ul',null,state.preview.rows.map(row=>h('li',{key:row.index},'Row '+(row.index+1)+': '+row.status+(row.error_code?' · '+row.error_code:''),...(row.warnings||[]).map((warning,i)=>h('p',{key:i},warning))))),
+     h(Button,{type:'button',disabled:state.busy||state.uncertain,onClick:start},'Start import')),
+    state.uncertain&&h(React.Fragment,null,h(Button,{type:'button',disabled:state.busy,onClick:reconcile},'Check accepted import'),h(Button,{type:'button',disabled:state.busy,onClick:()=>{state.uncertain=false;start();}},'Retry same import request')),
+    state.job&&h('section',{'aria-label':'Import progress'},h('p',{role:'status'},'Import '+state.job.state),h('p',null,`Imported: ${state.job.imported} · Skipped: ${state.job.skipped} · Failed: ${state.job.failed} · Remaining: ${state.job.remaining}`),
+     h('p',{className:'hb-muted'},'Job '+state.job.id+' · committed records are kept when cancelled.'),h('ul',null,(state.job.rows||[]).map(row=>h('li',{key:row.index},'Row '+(row.index+1)+': '+row.outcome+(row.error_code?' · '+row.error_code:'')))),
+     h(Button,{type:'button',disabled:state.busy,onClick:inspect},'Refresh import'),['pending','running'].includes(state.job.state)&&h(Button,{type:'button',disabled:state.busy,onClick:cancel},'Cancel remaining import'),
+     !['pending','running'].includes(state.job.state)&&h(Button,{type:'button',disabled:state.busy,onClick:reset},'New import')),
+    state.error&&h('p',{role:'alert',className:'hb-error'},state.error),h(Button,{type:'button',onClick:close},'Close import')));
+ };
+}
+
 function createLibrary(React,adapter,components,styles){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
  const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components);
- const Dialog=createLibraryDialog(React,components);
+ const Dialog=createLibraryDialog(React,components),Import=createLibraryImport(React,adapter,components);
  const defaults=()=>({query:'',view:'all',collectionId:null,tags:[],limit:50,offset:0,mode:'grid',selectedIds:[],scroll:0});
  return function Bookmarks({ctx,scope='dashboard',onAsk,onReady}={}){
   const [libraryId,setLibraryId]=useState(null),[query,setQuery]=useState(defaults),[page,setPage]=useState({items:[],total:0}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [form,setForm]=useState(null),[detail,setDetail]=useState(null),[revision,setRevision]=useState(0),[drawer,setDrawer]=useState(false),[search,setSearch]=useState(''),[identityRetry,setIdentityRetry]=useState(0),[narrow,setNarrow]=useState(false);
   const libraryRoot=useRef(null);
+  const [importOpen,setImportOpen]=useState(false);
   const [trashTarget,setTrashTarget]=useState(null),[trashBusy,setTrashBusy]=useState(false),[undoTrash,setUndoTrash]=useState(null);const trashLock=useRef(false);
   useEffect(()=>{if(typeof ResizeObserver==='undefined'||!libraryRoot.current)return;const observer=new ResizeObserver(entries=>{if(entries[0])setNarrow(entries[0].contentRect.width<=680);});observer.observe(libraryRoot.current.closest('.hb-workspace-frame')||libraryRoot.current);return()=>observer.disconnect();},[]);
   const live=useRef(true),generation=useRef(0),current=useRef(null),surface=useRef(null),restored=useRef(false),selectedItems=useRef(new Map()),updating=useRef(new Set());
@@ -844,6 +891,7 @@ function createLibrary(React,adapter,components,styles){
   return h('section',{ref:libraryRoot,className:'hb-library','aria-label':'Bookmarks'},
    h('div',{className:'hb-library-topbar'},h(Button,{type:'button','aria-label':'Toggle library navigation','aria-expanded':drawer,onClick:()=>setDrawer(open=>!open)},'☰'),
     h('form',{className:'hb-search',onSubmit:event=>{event.preventDefault();change({query:search});}},h(Input,{type:'search',name:'query','aria-label':'Search bookmarks',value:search,placeholder:'Search your library…',onChange:event=>setSearch(event.target.value),onInput:event=>setSearch(event.currentTarget.value)}),h(Button,{type:'submit'},'Search')),
+    h(Button,{type:'button',disabled:!libraryId,onClick:()=>setImportOpen(true)},'Import'),
     h(Button,{type:'button',className:'hb-primary',disabled:!libraryId,onClick:()=>{setDetail(null);setForm({item:null});}},'Add')),
    error&&h('div',{role:'alert',className:'hb-error'},error,h(Button,{type:'button',onClick:refresh},'Retry library')),
    notice&&h('p',{role:'status',className:'hb-notice'},notice,undoTrash&&h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(undoTrash,true)},'Undo trash')),
@@ -857,6 +905,7 @@ function createLibrary(React,adapter,components,styles){
      !loading&&!page.items.length&&h('div',{className:'hb-empty'},h('h2',null,query.query||query.tags.length?'No matching items':'Nothing here yet'),h('p',null,'Save something worth keeping, or try a different filter.')),
      h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,onTrash:item=>item.deleted_at?trashChange(item,true):setTrashTarget(item),selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
 
+   libraryId&&h(Import,{key:JSON.stringify([scope,libraryId]),ctx,scope,libraryId,open:importOpen,onClose:()=>setImportOpen(false),onChanged:refresh}),
    trashTarget&&h(Dialog,{title:'Move to trash?',description:'Notes and images are kept. You can restore this item later.',onCloseRequest:()=>{if(!trashBusy)setTrashTarget(null);}},h('p',null,bookmarkItemName(trashTarget)),h(Button,{type:'button',disabled:trashBusy,onClick:()=>setTrashTarget(null)},'Cancel'),h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(trashTarget)},trashBusy?'Moving…':'Move to trash')),
    form&&h(Form,{key:form.item?JSON.stringify([form.item.id,form.item.revision]):'new',ctx,scope,libraryId,item:form.item,defaultCollection:query.collectionId,onSaved:saved,onClose:()=>setForm(null)}),
    detail&&!form&&h(Detail,{key:detail,ctx,scope,libraryId,itemId:detail,onEdit:item=>{setDetail(null);setForm({item});},onAsk,onClose:()=>setDetail(null)}));
