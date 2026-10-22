@@ -147,12 +147,33 @@ def execute(name, params, service_factory=get_service):
         return {'ok':False,'error':error}
 
 
+def _dispatch_import(name, params):
+    result=dispatch(name,params)
+    enrich=False
+    if result['ok']:
+        # Admission snapshots a route only for explicit opt-in. Read that
+        # durable plugin-owned fact, not caller flags or process-local preview
+        # state: retries/request lookup must also work after cold registration.
+        # Keep SQLite off the host loop and settings out of the public receipt.
+        with get_service()._storage._transaction() as connection:
+            row=connection.execute('SELECT settings IS NOT NULL AS enrich FROM import_jobs WHERE id=?',
+                                   (result['result']['id'],)).fetchone()
+            enrich=row is not None and bool(row['enrich'])
+    return result,enrich
+
+
 def register_tools(ctx):
     for name,(description,fields,required) in SPECS.items():
         async def handler(params,_name=name,**kwargs):
             if _name=='bookmark_save': ensure_enrichment()
-            if _name in {'bookmark_import_start','bookmark_job_get','bookmark_job_cancel','bookmark_import_request_get'}:ensure_imports()
-            result=await asyncio.to_thread(dispatch,_name,params)
+            if _name in {'bookmark_import_start','bookmark_job_get','bookmark_job_cancel','bookmark_import_request_get'}:
+                ensure_imports()
+                result,enrich=await asyncio.to_thread(_dispatch_import,_name,params)
+                # Only this public async lane can activate the registered owner
+                # after synchronous startup deferred for lack of a host loop.
+                if enrich: ensure_enrichment()
+            else:
+                result=await asyncio.to_thread(dispatch,_name,params)
             return json.dumps(result,ensure_ascii=False)
         ctx.register_tool(name=name,toolset='hermes_bookmarks',
             schema={'name':name,'description':description,'parameters':{
