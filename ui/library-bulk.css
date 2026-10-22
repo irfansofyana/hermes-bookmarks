@@ -1,0 +1,20 @@
+/* Selection chrome is local to Bookmarks and follows both host themes. */
+.hb-workspace .hb-library-heading{flex-wrap:wrap}
+.hb-workspace .hb-view-mode{flex-wrap:wrap;align-items:center}
+.hb-workspace .hb-selection-bar{position:sticky;top:0;z-index:2;border:1px solid var(--hb-line);border-radius:10px;padding:10px 12px;background:var(--hb-card);box-shadow:0 3px 12px color-mix(in srgb,var(--hb-text) 5%,transparent)}
+.hb-workspace .hb-selection-bar>span{font-weight:600;margin-right:auto}
+.hb-workspace .hb-notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 22px;margin:0;border-bottom:1px solid var(--hb-line)}
+.hb-dialog.hb-dialog-bulk{width:min(720px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.hb-dialog .hb-bulk-review{display:grid;gap:14px;min-width:0}
+.hb-dialog .hb-bulk-review>p{margin:0}
+.hb-dialog .hb-bulk-results{list-style:none;padding:0;margin:0;max-height:35dvh;overflow:auto;border:1px solid var(--hb-line);border-radius:9px}
+.hb-dialog .hb-bulk-results li{padding:11px 14px;border-bottom:1px solid var(--hb-line);overflow-wrap:anywhere;font-size:13px;line-height:1.6}
+.hb-dialog .hb-bulk-results li:last-child{border-bottom:0}
+.hb-dialog .hb-bulk-results p{margin:5px 0}
+.hb-dialog .hb-bulk-results button{display:block;margin-top:7px}
+.hb-dialog .hb-bulk-warning{padding:12px 14px;border:1px solid var(--hb-line);border-radius:8px;font-weight:500}
+.hb-dialog .hb-bulk-review>.hb-form-actions{position:sticky;bottom:0;background:var(--hb-card);padding-block:12px;border-top:1px solid var(--hb-line);margin:0}
+.hb-dialog .hb-bulk-review input[type=checkbox]{width:16px;height:16px;vertical-align:middle;margin-right:8px}
+.hb-dialog .hb-bulk-review textarea,.hb-dialog .hb-bulk-review select{width:100%;box-sizing:border-box}
+@container(max-width:680px){.hb-workspace .hb-library-topbar{flex-wrap:wrap}.hb-workspace .hb-search{flex-basis:calc(100% - 52px)}.hb-workspace .hb-view-mode button{min-height:36px}.hb-workspace .hb-selection-bar{gap:8px}.hb-workspace .hb-selection-bar button{min-height:36px}}
+@media(max-width:650px){.hb-dialog.hb-dialog-bulk{width:calc(100vw - 12px);max-width:calc(100vw - 12px)}.hb-dialog .hb-bulk-results{max-height:30dvh}}
