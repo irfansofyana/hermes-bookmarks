@@ -3,6 +3,7 @@ from sqlite3 import Connection
 
 from .errors import ConfigurationError
 from .library_schema import upgrade_library
+from .imports.schema import upgrade_imports
 
 
 MIGRATIONS = (
@@ -71,6 +72,7 @@ MIGRATIONS = (
         "INSERT INTO capture_operations SELECT * FROM capture_operations_old",
         "DROP TABLE capture_operations_old",
     ),
+    (upgrade_imports,),
 )
 
 

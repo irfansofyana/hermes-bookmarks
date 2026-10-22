@@ -33,7 +33,7 @@ class LibraryMigrationTests(unittest.TestCase):
         self.assertEqual((item['notes'],item['description'],item['collection_id'],item['primary_asset_id']),('','',None,None))
         self.assertIs(item['favorite'],False); self.assertIs(item['read_later'],False)
         with service._storage._transaction() as c:
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 7)
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 8)
             self.assertEqual(c.execute('SELECT rowid,enrichment_generation FROM items').fetchone()[:],(42,7))
             self.assertEqual(c.execute("SELECT generation,token,expires FROM jobs WHERE id='pending-job'").fetchone()[:],(7,'old-token',123.0))
             self.assertEqual(c.execute("SELECT state,generation FROM jobs WHERE id='cancelled-job'").fetchone()[:],('cancelled',6))

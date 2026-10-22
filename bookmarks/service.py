@@ -64,6 +64,26 @@ class BookmarkService:
         from .trash import transition
         return transition(self._storage,item_id,expected_revision,deleted=False)
 
+    def import_preview(self, records=None, html=None, options=None):
+        from .imports.preview import ImportStore
+        return ImportStore(self._storage).preview(records,html,options)
+
+    def import_start(self, preview_id, input_digest, request_id):
+        from .imports.preview import ImportStore
+        return ImportStore(self._storage).start(preview_id,input_digest,request_id)
+
+    def import_job_get(self, job_id, limit=50, offset=0):
+        from .imports.preview import ImportStore
+        return ImportStore(self._storage).get(job_id,limit,offset)
+
+    def import_request_get(self, request_id):
+        from .imports.preview import ImportStore
+        return ImportStore(self._storage).request_get(request_id)
+
+    def import_job_cancel(self, job_id):
+        from .imports.preview import ImportStore
+        return ImportStore(self._storage).cancel(job_id)
+
     def identity(self):
         with self._storage._transaction() as connection:
             row = connection.execute("SELECT value FROM library_config WHERE key='library_id'").fetchone()
