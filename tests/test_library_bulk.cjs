@@ -4,6 +4,14 @@ const {mount,click,typeField,button,flush}=require('./helpers/emitted-client.cjs
 const base=(id)=>({id,title:'Fixture '+id,url:'https://example.org/'+id,kind:'link',revision:3,notes:'Personal '+id,tags:['Keep'],tag_details:[],attachments:[],favorite:false,read_later:false,deleted_at:null});
 async function select(app){await click(button(app,'Select visible items'),app);await click(button(app,'Edit selection'),app);await flush();}
 for(const target of ['desktop','dashboard']){
+ test(target+': an unavailable selection can be refreshed read-only before Apply',async()=>{
+  let available=false,writes=0;const a=base('a'),app=await mount(target,{overrideApi:(route,init)=>{
+   if(route.startsWith('/items?'))return {ok:true,result:{items:[a],total:1,offset:0,limit:50}};
+   if(route==='/items/a')return available?{ok:true,result:a}:{ok:false,error:{code:'not_found',message:'Temporarily unavailable'}};
+   if(init?.method==='POST')writes++;
+  }});
+  try{await select(app);assert.equal(button(app,'Apply to 1 items').disabled,true);available=true;await click(button(app,'Review current selection'),app);assert.equal(button(app,'Apply to 1 items').disabled,false);assert.equal(writes,0);}finally{await app.close();}
+ });
  test(target+': loading selection can be stopped and no unreviewed item is mutated',async()=>{
   let release;const a=base('a');let writes=0;const app=await mount(target,{overrideApi:(route,init)=>{
    if(route.startsWith('/items?'))return {ok:true,result:{items:[a],total:1,offset:0,limit:50}};
