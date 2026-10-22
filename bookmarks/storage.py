@@ -22,6 +22,7 @@ def item_from_row(row, connection):
         SELECT ia.asset_id,ia.role,a.mime_type,a.size,a.width,a.height
         FROM item_assets ia JOIN assets a ON a.id=ia.asset_id WHERE ia.item_id=?
         ORDER BY CASE ia.role WHEN 'primary' THEN 0 ELSE 1 END,ia.rowid''', (data['id'],))]
+    data['imported_sources'] = [dict(source) for source in connection.execute('SELECT source_id,source,locator,imported_summary,source_text FROM import_provenance WHERE item_id=? ORDER BY rowid',(data['id'],))] if connection.execute("SELECT 1 FROM sqlite_master WHERE name='import_provenance'").fetchone() else []
     return data
 
 

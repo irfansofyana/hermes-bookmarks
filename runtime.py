@@ -24,6 +24,7 @@ _roots = {}
 _startups = {}
 _contexts = {}
 _workers = {}
+_import_states = {}
 _retry_after = {}
 _RESTART_COOLDOWN = 30
 
@@ -59,6 +60,7 @@ def bind_runtime(ctx):
             _startups.pop(token, None)
             _contexts.pop(token, None)
             _workers.pop(token, None)
+            _import_states.pop(token,None)
             _retry_after.pop(token, None)
             if not _roots and sys.modules.get(BRIDGE_NAME) is module:
                 sys.modules.pop(BRIDGE_NAME, None)
@@ -129,6 +131,15 @@ def ensure_enrichment():
                 if result not in {'storage_unavailable','worker_failed','worker_stopped'}: continue
                 if monotonic() < _retry_after.get(token,0): continue
             start_registered_enrichment(token)
+
+
+def ensure_imports():
+    bridge=sys.modules.get(BRIDGE_NAME)
+    if bridge is not None and bridge is not sys.modules[__name__]:return bridge.ensure_imports()
+    module=importlib.import_module('.import_worker_host',__package__) if __package__ else importlib.import_module('import_worker_host')
+    queue_module=importlib.import_module('.bookmarks.imports.runner',__package__) if __package__ else importlib.import_module('bookmarks.imports.runner')
+    storage_module=importlib.import_module('.bookmarks.storage',__package__) if __package__ else importlib.import_module('bookmarks.storage')
+    return module.ensure(_contexts,_roots,_import_states,_lock,create_queue=lambda root:queue_module.ImportQueue(storage_module.Storage(root)))
 
 
 def get_status():

@@ -1,4 +1,5 @@
 """Atomic capture, revision-safe metadata, notes, and owned image associations."""
+from contextlib import nullcontext
 import hashlib
 import json
 import re
@@ -106,7 +107,7 @@ class ItemStore:
 
     def capture(self, *, kind='link', url=None, title='', description='', notes='', collection_id=None,
                 tags=(), favorite=False, read_later=False, primary_asset_id=None, attachment_ids=(),
-                operation_key=None, enrichment_settings=None):
+                operation_key=None, enrichment_settings=None, _connection=None):
         values = metadata({'title':title,'description':description,'notes':notes,'collection_id':collection_id,
                            'favorite':favorite,'read_later':read_later,'attachment_ids':attachment_ids})
         labels = normalize_tags(tags)
@@ -128,7 +129,7 @@ class ItemStore:
         payload = {**values,'kind':kind,'url':url,'tags':[name for name,_ in labels],
                    'primary_asset_id':primary_asset_id,'attachment_ids':ids}
         digest = hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode('utf-8')).hexdigest()
-        with self.storage._transaction(write=True) as connection:
+        with (self.storage._transaction(write=True) if _connection is None else nullcontext(_connection)) as connection:
             if operation_key is not None:
                 prior = connection.execute('SELECT * FROM capture_operations WHERE operation_key=?',(operation_key,)).fetchone()
                 if prior is not None:

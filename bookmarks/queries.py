@@ -22,9 +22,10 @@ def search(connection, query, limit, offset, *, view, collection_id, tags):
     identities = [identity for _,identity in normalize_tags(tags)]
     predicates = ['items.deleted_at IS NOT NULL' if view=='trash' else 'items.deleted_at IS NULL']; parameters = []; source = 'items'
     if query.strip():
-        source += ' JOIN items_fts ON items_fts.rowid=items.rowid'
-        predicates.append('items_fts MATCH ?')
-        parameters.append('"'+query.strip().replace('"','""')+'"')
+        predicates.append("""(items.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?) OR
+            EXISTS (SELECT 1 FROM import_provenance p WHERE p.item_id=items.id AND
+                (instr(lower(p.source_text),lower(?))>0 OR instr(lower(p.imported_summary),lower(?))>0)))""")
+        parameters.extend(['"'+query.strip().replace('"','""')+'"',query.strip(),query.strip()])
     if view == 'inbox':
         predicates.append('items.collection_id IS NULL')
     elif view == 'favorites':
