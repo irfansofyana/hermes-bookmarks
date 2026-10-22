@@ -2,6 +2,14 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {mount,click,typeField,button,flush}=require('./helpers/emitted-client.cjs');
 for(const target of ['desktop','dashboard']){
+ test(target+': cancelling from later result page adopts server response pagination',async()=>{
+  const app=await mount(target,{overrideApi:async(route)=>{
+   if(route.startsWith('/imports/running')){const offset=route.endsWith('/cancel')?0:Number(new URL(route,'https://fixture.invalid').searchParams.get('offset')||0);return {ok:true,result:{id:'running',state:route.endsWith('/cancel')?'cancelled':'running',total:100,processed:51,remaining:49,imported:51,skipped:0,failed:0,offset,limit:50,rows:[{index:offset,outcome:'imported'}]}};}
+  }});
+  try{await click(button(app,'Import'),app);await typeField(app,'Import job ID','running');await click(button(app,'Open import job'),app);await click(button(app,'Next import results'),app);assert.match(app.element.textContent,/Row 51: imported/);
+   await click(button(app,'Cancel remaining import'),app);assert.match(app.element.textContent,/Row 1: imported/);assert.equal(button(app,'Previous import results').disabled,true);assert.equal(button(app,'Next import results').disabled,false);
+  }finally{await app.close();}
+ });
  test(target+': saved import job can be inspected after reopening and all result pages are reachable',async()=>{
   const reads=[];const app=await mount(target,{overrideApi:async(route)=>{
    if(route.startsWith('/imports/saved-job')){reads.push(route);const offset=Number(new URL(route,'https://fixture.invalid').searchParams.get('offset')||0);return {ok:true,result:{id:'saved-job',state:'succeeded',total:51,processed:51,remaining:0,imported:51,skipped:0,failed:0,limit:50,offset,rows:[{index:offset,outcome:'imported',warnings:[]}]}};}

@@ -48,7 +48,7 @@ function createLibrary(React,adapter,components,styles){
    catch(error){if(live.current){setError(error.code==='conflict'?'This item changed elsewhere. Reload the library before trying again.':error.message);setTrashTarget(null);}}
    finally{trashLock.current=false;if(live.current)setTrashBusy(false);}
   }
-  function saved(result){setForm(null);setNotice(result.receipt?.outcome==='duplicate'?'Already saved. Your staged fields were not applied.':'Saved to your library.');refresh();if(result.reopenEdit)setForm({item:result.item});else if(result.openExisting)setDetail(result.item.id);}
+  function saved(result){setForm(null);setNotice(result.receipt?.outcome==='trashed_duplicate'?'Already in Trash. Your staged fields were not applied; restore explicitly from Trash.':result.receipt?.outcome==='duplicate'?'Already saved. Your staged fields were not applied.':'Saved to your library.');refresh();if(result.reopenEdit)setForm({item:result.item});else if(result.openExisting)setDetail(result.item.id);}
   function askSelection(){const items=query.selectedIds.map(id=>selectedItems.current.get(id)||{id,title:id});onAsk?.(items.slice(0,20));if(items.length>20)setNotice('Only the first 20 selected references were prepared. Nothing was sent.');}
   const heading=query.collectionId?'Collection · includes descendants':({all:'All items',inbox:'Inbox',favorites:'Favorites',read_later:'Read later',trash:'Trash'})[query.view];
   const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision,narrow,drawer,onDrawerClose:()=>setDrawer(false)};

@@ -11,7 +11,7 @@ function createLibraryImport(React,adapter,components){
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   useEffect(()=>{const listener=()=>{if(!adapter.currentScope||adapter.currentScope()===scope)paint(n=>n+1);};state.listeners.add(listener);return()=>state.listeners.delete(listener);},[scope,libraryId]);
   const owned=(route,init)=>bookmarkOwnedRequest(adapter,ctx,scope,route,init);
-  function accept(job){const prior=state.job;state.job=job;state.uncertain=false;state.error=job.state==='failed'?'Import failed: '+(job.error||'storage unavailable'):'';changed();if(!prior||prior.processed!==job.processed)for(const listener of state.listeners)listener();}
+  function accept(job){const prior=state.job;state.job=job;if(Number.isSafeInteger(job.offset))state.offset=job.offset;state.uncertain=false;state.error=job.state==='failed'?'Import failed: '+(job.error||'storage unavailable'):'';changed();if(!prior||prior.processed!==job.processed)for(const listener of state.listeners)listener();}
   async function inspect(offset=state.offset){if(state.busy||!state.job)return;state.offset=offset;state.busy=true;changed();try{accept((await owned('/imports/'+encodeURIComponent(state.job.id)+'?limit=50&offset='+state.offset)).result);refresh();}catch(error){state.error=error.message;}finally{state.busy=false;changed();}}
   useEffect(()=>{if(!state.job||!['pending','running'].includes(state.job.state))return;const timer=setInterval(()=>{inspect().catch(()=>{});},1500);return()=>clearInterval(timer);},[state.job?.id,state.job?.state]);
   function source(value){if(state.busy||state.uncertain||state.job)return;state.source=value;state.preview=null;state.request=null;state.error='';changed();}

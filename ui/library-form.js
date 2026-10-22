@@ -31,7 +31,7 @@ function createLibraryForm(React,adapter,components){
   function close(){if(draft.phase==='saving'){draft.error='Saving is still in progress. Keep this form open until the outcome is known.';changed();return;}if(JSON.stringify(value)!==draft.initial||draft.phase==='uncertain'||draft.uploads>0)setConfirm(true);else onClose();}
   function finish(payload){
    const record=payload.item||payload.result,receipt=payload.receipt;
-   if(receipt?.outcome==='duplicate'){draft.phase='duplicate';draft.saved=record;draft.receipt=receipt;draft.error='This URL is already saved. Your staged fields have not overwritten it.';changed();return;}
+   if(['duplicate','trashed_duplicate'].includes(receipt?.outcome)){draft.phase='duplicate';draft.saved=record;draft.receipt=receipt;draft.error=receipt.outcome==='trashed_duplicate'?'This URL is in Trash. Your staged fields are preserved and have not overwritten it. Open the existing item to inspect it; restore explicitly from Trash.':'This URL is already saved. Your staged fields have not overwritten it.';changed();return;}
    draft.phase='saved';draft.saved=record;draft.receipt=receipt;changed();
   }
   async function verify(){

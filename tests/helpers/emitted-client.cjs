@@ -6,7 +6,7 @@ async function flush(){await React.act(async()=>{await new Promise(resolve=>setI
 function button(app,name){return [...app.element.querySelectorAll('button')].find(node=>(node.getAttribute('aria-label')||node.textContent.trim())===name);}
 async function click(node,app){assert.ok(node,'Expected control');await React.act(async()=>node.dispatchEvent(new app.dom.window.MouseEvent('click',{bubbles:true,cancelable:true})));}
 async function typeField(app,label,value){const node=app.field(label);assert.ok(node,'Expected '+label);await React.act(async()=>{const proto=node.tagName==='TEXTAREA'?app.dom.window.HTMLTextAreaElement.prototype:node.tagName==='SELECT'?app.dom.window.HTMLSelectElement.prototype:app.dom.window.HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(node,value);node.dispatchEvent(new app.dom.window.Event('input',{bubbles:true}));node.dispatchEvent(new app.dom.window.Event('change',{bubbles:true}));});}
-async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}){
+async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false,intervalClock}={}){
  const dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.invalid'});
  global.window=dom.window;global.document=dom.window.document;global.HTMLElement=dom.window.HTMLElement;global.IS_REACT_ACT_ENVIRONMENT=true;
  // jsdom cannot implement modal focus/top-layer layout; actual-browser tests do.
@@ -71,7 +71,7 @@ async function mount(target,{saved=[],overrideRpc,overrideApi,autoOpen=false}={}
  const SDK={React,hooks:React,components:{},fetchJSON:api,buildWsUrl:async()=> 'wss://fixture.invalid/api/ws?ticket=synthetic'};
  const ctx={rest:api,register:entry=>{if(entry.render)page=entry.render;}};
  const scope={React,host,ctx,useValue:atom=>atom?.get?.(),ROUTES_AREA:'routes',SIDEBAR_NAV_AREA:'nav',Button:'button',Input:'input',
-  ResizeObserver,crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,TextEncoder,btoa,Uint8Array,document:dom.window.document,
+  ResizeObserver,crypto:webcrypto,WebSocket:Socket,console,setTimeout,clearTimeout,setInterval:intervalClock?.setInterval||setInterval,clearInterval:intervalClock?.clearInterval||clearInterval,URL,URLSearchParams,TextEncoder,btoa,Uint8Array,document:dom.window.document,
   window:{__HERMES_PLUGIN_SDK__:SDK,__HERMES_PLUGINS__:{register:(_name,Page)=>{page=()=>React.createElement(Page);}}}};
  let source=fs.readFileSync(target==='desktop'?'desktop/plugin.js':'dashboard/dist/index.js','utf8');
  if(target==='desktop')source=source.replace(/^import .*;\n/gm,'').replace('export default','const plugin=')+'\nplugin.register(ctx);';
