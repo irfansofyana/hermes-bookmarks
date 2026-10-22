@@ -35,7 +35,9 @@ class ImportStore:
         with self.storage._transaction(write=True) as c:
             for index,value in enumerate(records):
                 try:
+                    source_warnings=value.pop('_html_warnings',[]) if html is not None and isinstance(value,dict) else []
                     clean,warnings=record(c,value)
+                    warnings+=source_warnings
                     if clean['url'] in seen:status='duplicate_in_batch'
                     elif c.execute('SELECT 1 FROM items WHERE url=?',(clean['url'],)).fetchone():status='existing'
                     else:status='valid'

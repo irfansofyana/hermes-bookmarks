@@ -21,5 +21,10 @@ provides_tools:
   - bookmark_collection_delete
   - bookmark_tag_list
   - bookmark_library_identity
+  - bookmark_import_preview
+  - bookmark_import_start
+  - bookmark_import_request_get
+  - bookmark_job_get
+  - bookmark_job_cancel
   - bookmark_counts
 provides_hooks: []

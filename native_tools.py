@@ -7,10 +7,10 @@ import re
 
 if __package__:
     from .bookmarks.errors import BookmarkError, ConflictError, ValidationError
-    from .runtime import get_service, dispatch, asset_operation, ensure_enrichment
+    from .runtime import get_service, dispatch, asset_operation, ensure_enrichment, ensure_imports
 else:
     from bookmarks.errors import BookmarkError, ConflictError, ValidationError
-    from runtime import get_service, dispatch, asset_operation, ensure_enrichment
+    from runtime import get_service, dispatch, asset_operation, ensure_enrichment, ensure_imports
 
 
 def text(length, *, nullable=False, **kwargs):
@@ -63,6 +63,14 @@ SPECS = {
     'bookmark_tag_list': ('Page normalized effective tags with whole-library counts; typing a query does not create tags.',
         {'query':text(2000),**PAGING},[]),
     'bookmark_library_identity': ('Read the configured shared library identity, independent of chat/profile configuration.',{},[]),
+    'bookmark_import_preview': ('Stage supplied normalized records or bookmark HTML for review. No source paths, fetching or AI by default. Unknown record fields are reported, not preserved.',
+        {'records':{'type':'array','maxItems':500,'items':{'type':'object','properties':{},'additionalProperties':True}},'html':text(2*1024*1024),
+         'options':object_rule({'duplicate_policy':{'type':'string','enum':['skip_existing']},'enrich':{'type':'boolean'}})},[]),
+    'bookmark_import_start': ('Explicitly start an immutable validated preview. Retry with the same request ID after uncertain acknowledgement.',
+        {'preview_id':ID,'input_digest':text(64,pattern='^[a-f0-9]{64}$'),'request_id':OPERATION},['preview_id','input_digest','request_id']),
+    'bookmark_import_request_get': ('Read accepted import by request ID without starting or retrying work.',{'request_id':OPERATION},['request_id']),
+    'bookmark_job_get': ('Read this plugin import job and exact reconciled progress/results. Does not access chat sessions or enrichment jobs.',{'job_id':ID,**PAGING},['job_id']),
+    'bookmark_job_cancel': ('Cancel remaining rows of one import. Already committed records are kept and reported.',{'job_id':ID},['job_id']),
     'bookmark_counts': ('Read whole-library All, Inbox, Favorites and Read later counts.',{},[]),
 }
 
@@ -94,10 +102,10 @@ def validate(value, rule):
         if rule.get('uniqueItems') and len(set(value))!=len(value):
             raise ValidationError()
     elif kind=='object':
-        if set(value)-set(rule['properties']) or set(rule.get('required',[]))-set(value):
+        if (rule.get('additionalProperties',False) is False and set(value)-set(rule['properties'])) or set(rule.get('required',[]))-set(value):
             raise ValidationError()
         for key,item in value.items():
-            validate(item,rule['properties'][key])
+            if key in rule['properties']:validate(item,rule['properties'][key])
 
 
 def execute(name, params, service_factory=get_service):
@@ -127,6 +135,8 @@ def execute(name, params, service_factory=get_service):
             'bookmark_capture_status':service.capture_status,
             'bookmark_collection_list':service.collection_list, 'bookmark_collection_create':service.collection_create,
             'bookmark_collection_update':service.collection_update, 'bookmark_collection_delete':service.collection_delete,
+            'bookmark_import_preview':service.import_preview,'bookmark_import_start':service.import_start,
+            'bookmark_import_request_get':service.import_request_get,'bookmark_job_get':service.import_job_get,'bookmark_job_cancel':service.import_job_cancel,
             'bookmark_tag_list':service.tag_list, 'bookmark_library_identity':service.identity, 'bookmark_counts':service.counts,
         }
         return {'ok':True,'result':operations[name](**params)}
@@ -141,6 +151,7 @@ def register_tools(ctx):
     for name,(description,fields,required) in SPECS.items():
         async def handler(params,_name=name,**kwargs):
             if _name=='bookmark_save': ensure_enrichment()
+            if _name in {'bookmark_import_start','bookmark_job_get','bookmark_job_cancel','bookmark_import_request_get'}:ensure_imports()
             result=await asyncio.to_thread(dispatch,_name,params)
             return json.dumps(result,ensure_ascii=False)
         ctx.register_tool(name=name,toolset='hermes_bookmarks',

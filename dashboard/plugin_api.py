@@ -8,9 +8,11 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-async def activate_worker():
+async def activate_worker(request: Request):
     bridge=sys.modules.get(BRIDGE_NAME)
-    if bridge is not None: bridge.ensure_enrichment()
+    if bridge is not None:
+        bridge.ensure_enrichment()
+        if request.url.path.split('/hermes-bookmarks',1)[-1].startswith('/imports'):bridge.ensure_imports()
 
 
 router = APIRouter(dependencies=[Depends(activate_worker)])
@@ -80,14 +82,14 @@ def invalid_constant(value):
     raise ValueError('Nonfinite JSON constant')
 
 
-async def metadata_request(request, name, identity=None):
+async def metadata_request(request, name, identity=None, *, max_bytes=128*1024):
     # Actual streamed byte bound; Content-Length is never an authority.
     if request.query_params:
         return invalid_request()
     data=bytearray()
     async for chunk in request.stream():
-        if len(data)+len(chunk)>128*1024:
-            return invalid_request(413,'Request exceeds 128 KiB.')
+        if len(data)+len(chunk)>max_bytes:
+            return invalid_request(413,'Request exceeds allowed byte limit.')
         data.extend(chunk)
     import json
     try:
@@ -167,6 +169,31 @@ async def collection_update(collection_id: str, request: Request):
 @router.post('/collections/{collection_id}/delete')
 async def collection_delete(collection_id: str, request: Request):
     return await metadata_request(request,'bookmark_collection_delete',{'collection_id':collection_id})
+
+
+@router.post('/imports/preview')
+async def import_preview(request: Request):
+    return await metadata_request(request,'bookmark_import_preview',max_bytes=2*1024*1024+128*1024)
+
+
+@router.post('/imports/start')
+async def import_start(request: Request):
+    return await metadata_request(request,'bookmark_import_start')
+
+
+@router.get('/imports/requests/{request_id}')
+def import_request_get(request_id: str, request: Request):
+    return query_response(request,'bookmark_import_request_get',identity={'request_id':request_id})
+
+
+@router.get('/imports/{job_id}')
+def import_job_get(job_id: str, request: Request):
+    return query_response(request,'bookmark_job_get',{'limit','offset'},identity={'job_id':job_id})
+
+
+@router.post('/imports/{job_id}/cancel')
+async def import_cancel(job_id: str, request: Request):
+    return await metadata_request(request,'bookmark_job_cancel',{'job_id':job_id})
 
 
 @router.get('/tags')
