@@ -2,6 +2,25 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {mount,click,typeField,button,flush}=require('./helpers/emitted-client.cjs');
 for(const target of ['desktop','dashboard']){
+ test(target+': saved import job can be inspected after reopening and all result pages are reachable',async()=>{
+  const reads=[];const app=await mount(target,{overrideApi:async(route)=>{
+   if(route.startsWith('/imports/saved-job')){reads.push(route);const offset=Number(new URL(route,'https://fixture.invalid').searchParams.get('offset')||0);return {ok:true,result:{id:'saved-job',state:'succeeded',total:51,processed:51,remaining:0,imported:51,skipped:0,failed:0,limit:50,offset,rows:[{index:offset,outcome:'imported',warnings:[]}]}};}
+  }});
+  try{await click(button(app,'Import'),app);await typeField(app,'Import job ID','saved-job');await click(button(app,'Open import job'),app);
+   assert.match(app.element.textContent,/Row 1: imported/);await click(button(app,'Next import results'),app);assert.match(app.element.textContent,/Row 51: imported/);
+   assert.match(reads.at(-1),/offset=50/);await click(button(app,'Previous import results'),app);assert.match(app.element.textContent,/Row 1: imported/);
+  }finally{await app.close();}
+ });
+ test(target+': discarded file read cannot populate a replacement source draft',async()=>{
+  let finish;const app=await mount(target);
+  try{await click(button(app,'Import'),app);const input=app.field('Import file');Object.defineProperty(input,'files',{value:[{name:'fixture.html',size:20,text:()=>new Promise(resolve=>{finish=resolve;})}]});
+   await require('react').act(async()=>input.dispatchEvent(new app.dom.window.Event('change',{bubbles:true})));
+   await click(button(app,'Close import'),app);await click(button(app,'Discard import'),app);await click(button(app,'Import'),app);
+   await typeField(app,'Import source','new draft');await require('react').act(async()=>finish('old HTML source'));
+   assert.equal(app.field('Import source').value,'new draft');assert.equal(app.field('Import format').value,'records');
+  }finally{await app.close();}
+ });
+
  test(target+': imports require preview and explicit Start, default no AI, retained dirty source',async()=>{
   let started=0;const preview={preview_id:'preview',input_digest:'a'.repeat(64),total:2,valid:1,invalid:1,existing:0,duplicate_in_batch:0,rows:[{index:0,status:'valid',warnings:['unsupported_field:extra']},{index:1,status:'invalid',warnings:[],error_code:'invalid_url'}]};
   const job={id:'job',kind:'import',state:'succeeded',total:2,processed:2,remaining:0,imported:1,skipped:0,failed:1,rows:[]};
