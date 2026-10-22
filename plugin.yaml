@@ -8,6 +8,8 @@ provides_tools:
   - bookmark_attachment_add
   - bookmark_attachment_get
   - bookmark_save
+  - bookmark_delete
+  - bookmark_restore
   - bookmark_get
   - bookmark_search
   - bookmark_update

@@ -39,7 +39,7 @@ function createLibraryNavigation(React,adapter,components){
    finally{state.saving=false;changed();}
   }
   const navigation=h('nav',{className:'hb-library-navigation','aria-label':'Library navigation'},
-   h('div',{className:'hb-system-views'},[['all','All items'],['inbox','Inbox'],['favorites','Favorites'],['read_later','Read later']].map(([view,label])=>h(Button,{key:view,type:'button','aria-label':label,'aria-current':query.view===view&&!query.collectionId?'page':undefined,onClick:()=>onQueryChange({view,collectionId:null})},h('span',null,label),h('span',{className:'hb-count'},counts[view]??'…')))),
+   h('div',{className:'hb-system-views'},[['all','All items'],['inbox','Inbox'],['favorites','Favorites'],['read_later','Read later'],['trash','Trash']].map(([view,label])=>h(Button,{key:view,type:'button','aria-label':label,'aria-current':query.view===view&&!query.collectionId?'page':undefined,onClick:()=>onQueryChange({view,collectionId:null})},h('span',null,label),h('span',{className:'hb-count'},counts[view]??'…')))),
    h('div',{className:'hb-nav-heading'},h('h2',null,'Collections'),h(Button,{type:'button','aria-label':'New collection',onClick:()=>manage(null)},'+')),
    h(Input,{type:'search','aria-label':'Find collections',placeholder:'Find a collection',value:collectionSearch,onChange:event=>setCollectionSearch(event.target.value),onInput:event=>setCollectionSearch(event.currentTarget.value)}),
    h(CollectionLevel,{ctx,scope,parentId:null,query,onQueryChange,search:collectionSearch,revision,onManage:manage}),

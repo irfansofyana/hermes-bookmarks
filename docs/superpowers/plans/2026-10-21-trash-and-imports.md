@@ -1,6 +1,6 @@
 # Recoverable trash and import-first migration implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans with the owner's existing hybrid workflow. Implement directly with TDD, one targeted data-integrity review and a final revision review. Steps use checkbox syntax for tracking. This is the next milestone plan, pending owner review; no approval of this new file is inferred from approval of the previous workspace plan.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans with the owner's existing hybrid workflow. Implement directly with TDD, one targeted data-integrity review and a final revision review. Steps use checkbox syntax for tracking. Owner approved immediate implementation of this written plan; retain the existing hybrid method.
 
 **Goal:** Add recoverable trash and safe, durable normalized-record/bookmark-HTML imports to the existing library, native tools and both client UIs.
 

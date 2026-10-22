@@ -66,7 +66,7 @@ class OrganizationAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json()['result']['items'],[first['result']])
         self.assertEqual((await self.call('bookmark_search',{'tags':['AI','Reading'],'view':'favorites'})),response.json())
         counts=await self.client.get(PREFIX+'/counts')
-        self.assertEqual(counts.json()['result'],{'all':2,'inbox':2,'favorites':1,'read_later':0})
+        self.assertEqual(counts.json()['result'],{'all':2,'inbox':2,'favorites':1,'read_later':0,'trash':0})
         self.assertEqual(await self.call('bookmark_counts',{}),counts.json())
         tags=await self.client.get(PREFIX+'/tags?query=read')
         self.assertEqual(tags.json()['result']['tags'],[{'name':'Reading','count':1}])

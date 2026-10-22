@@ -16,11 +16,11 @@ def search(connection, query, limit, offset, *, view, collection_id, tags):
     from .storage import item_from_row
     pagination(limit, offset)
     validate_text(query, max_chars=2000)
-    if not isinstance(view, str) or view not in {'all','inbox','favorites','read_later'}:
+    if not isinstance(view, str) or view not in {'all','inbox','favorites','read_later','trash'}:
         raise ValidationError()
     require_collection(connection, collection_id)
     identities = [identity for _,identity in normalize_tags(tags)]
-    predicates = []; parameters = []; source = 'items'
+    predicates = ['items.deleted_at IS NOT NULL' if view=='trash' else 'items.deleted_at IS NULL']; parameters = []; source = 'items'
     if query.strip():
         source += ' JOIN items_fts ON items_fts.rowid=items.rowid'
         predicates.append('items_fts MATCH ?')
@@ -52,16 +52,16 @@ def search(connection, query, limit, offset, *, view, collection_id, tags):
 
 def counts(connection):
     row = connection.execute('''SELECT count(*) AS "all",coalesce(sum(collection_id IS NULL),0) AS inbox,
-        coalesce(sum(favorite),0) AS favorites,coalesce(sum(read_later),0) AS read_later FROM items''').fetchone()
-    return dict(row)
+        coalesce(sum(favorite),0) AS favorites,coalesce(sum(read_later),0) AS read_later FROM items WHERE deleted_at IS NULL''').fetchone()
+    return {**dict(row),'trash':connection.execute('SELECT count(*) FROM items WHERE deleted_at IS NOT NULL').fetchone()[0]}
 
 
 def tag_list(connection, query, limit, offset):
     import unicodedata
     pagination(limit, offset); validate_text(query, max_chars=2000)
     identity = unicodedata.normalize('NFC',unicodedata.normalize('NFC',query.strip()).casefold())
-    source = '''FROM tags t JOIN item_tags it ON it.tag_id=t.id
-        WHERE (it.manual=1 OR it.generated=1) AND it.suppressed=0 AND instr(t.identity,?)>0'''
+    source = '''FROM tags t JOIN item_tags it ON it.tag_id=t.id JOIN items i ON i.id=it.item_id
+        WHERE i.deleted_at IS NULL AND (it.manual=1 OR it.generated=1) AND it.suppressed=0 AND instr(t.identity,?)>0'''
     total = connection.execute('SELECT count(DISTINCT t.id) '+source, (identity,)).fetchone()[0]
     rows = []
     if offset < total:

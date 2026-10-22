@@ -138,6 +138,6 @@ class CollectionStore:
                 count = connection.execute('''WITH RECURSIVE subtree(id,depth) AS (
                     SELECT id,1 FROM collections WHERE id=? UNION ALL
                     SELECT c.id,s.depth+1 FROM collections c JOIN subtree s ON c.parent_id=s.id WHERE s.depth<16)
-                    SELECT count(*) FROM items WHERE collection_id IN (SELECT id FROM subtree)''', (row['id'],)).fetchone()[0]
+                    SELECT count(*) FROM items WHERE deleted_at IS NULL AND collection_id IN (SELECT id FROM subtree)''', (row['id'],)).fetchone()[0]
                 result.append({**project(row),'count':count,'path':path(connection,row['id'])})
             return {'collections':result,'total':total,'limit':limit,'offset':offset}

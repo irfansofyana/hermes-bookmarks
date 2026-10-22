@@ -11,7 +11,7 @@ function createLibraryDetail(React,adapter,components){
     h('section',null,h('h3',null,'Saved AI summary'),item.summary?bookmarkMarkdown(React,item.summary):h('p',{className:'hb-muted'},item.kind==='image'?'Visual analysis is not available in this preview.':'No saved summary yet.'),h('p',{className:'hb-muted'},'Processing: '+(item.enrichment_status||'not_started'))),
     h('section',null,h('h3',null,'Personal notes'),item.notes?bookmarkMarkdown(React,item.notes):h('p',{className:'hb-muted'},'No personal notes yet.')),
     item.attachments?.length>0&&h('section',null,h('h3',null,'Images'),h('div',{className:'hb-attachments'},item.attachments.map(asset=>h(AssetImage,{key:asset.asset_id,ctx,scope,assetId:asset.asset_id,alt:asset.role==='primary'?'Primary image':'Attached image'})))),
-    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:()=>onEdit(item)},'Edit'),h(Button,{type:'button',onClick:()=>{onAsk?.(item);onClose();}},'Ask Hermes'))),
+    h('div',{className:'hb-form-actions'},!item.deleted_at&&h(Button,{type:'button',onClick:()=>onEdit(item)},'Edit'),h(Button,{type:'button',onClick:()=>{onAsk?.(item);onClose();}},'Ask Hermes'))),
    h('div',{className:'hb-form-actions'},h(Button,{type:'button',onClick:onClose},'Close details')));
  };
 }

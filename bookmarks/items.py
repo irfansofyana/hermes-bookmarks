@@ -135,8 +135,8 @@ class ItemStore:
                     if prior['payload_hash'] != digest:
                         raise ConflictError()
                     return {'item':project(connection,prior['item_id']),'receipt':receipt(prior)}
-            existing = connection.execute('SELECT id FROM items WHERE url=?',(url,)).fetchone() if kind=='link' else None
-            outcome = 'duplicate' if existing is not None else 'created'
+            existing = connection.execute('SELECT id,deleted_at FROM items WHERE url=?',(url,)).fetchone() if kind=='link' else None
+            outcome = ('trashed_duplicate' if existing['deleted_at'] is not None else 'duplicate') if existing is not None else 'created'
             if existing is not None:
                 item_id = existing['id']
             else:
@@ -153,7 +153,7 @@ class ItemStore:
                 associations(connection,item_id,primary_asset_id,ids)
                 apply_manual(connection,item_id,labels,[])
             row = load(connection,item_id)
-            if kind=='link' and enrichment_settings is not None and row['enrichment_status']=='not_started':
+            if kind=='link' and row['deleted_at'] is None and enrichment_settings is not None and row['enrichment_status']=='not_started':
                 from .jobs import validate_settings
                 encoded = validate_settings(enrichment_settings)
                 prior_job = connection.execute('SELECT id FROM jobs WHERE item_id=? AND revision=?',(item_id,row['revision'])).fetchone()
@@ -186,6 +186,7 @@ class ItemStore:
         values = metadata(changes)
         with self.storage._transaction(write=True) as connection:
             row = load(connection,item_id,expected_revision)
+            if row['deleted_at'] is not None: raise ConflictError(row['revision'])
             return self._update(connection,row,values)
 
     def _update(self, connection, row, values):
@@ -213,5 +214,6 @@ class ItemStore:
             raise ValidationError()
         with self.storage._transaction(write=True) as connection:
             row = load(connection,item_id,expected_revision)
+            if row['deleted_at'] is not None: raise ConflictError(row['revision'])
             final = row['notes']+text if mode=='append' else text
             return self._update(connection,row,metadata({'notes':final}))

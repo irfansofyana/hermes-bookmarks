@@ -61,6 +61,16 @@ MIGRATIONS = (
         "CREATE INDEX chat_threads_profile ON chat_threads(profile,created_at DESC)",
     ),
     (upgrade_library,),
+    (
+        "ALTER TABLE items ADD COLUMN deleted_at REAL",
+        "CREATE INDEX items_deleted_collection ON items(deleted_at,collection_id)",
+        "ALTER TABLE capture_operations RENAME TO capture_operations_old",
+        """CREATE TABLE capture_operations(operation_key TEXT PRIMARY KEY NOT NULL,payload_hash TEXT NOT NULL,
+            item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,accepted_revision INTEGER NOT NULL CHECK(accepted_revision>=1),
+            outcome TEXT NOT NULL CHECK(outcome IN ('created','duplicate','trashed_duplicate')))""",
+        "INSERT INTO capture_operations SELECT * FROM capture_operations_old",
+        "DROP TABLE capture_operations_old",
+    ),
 )
 
 

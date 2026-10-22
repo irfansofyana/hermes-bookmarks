@@ -28,7 +28,7 @@ class ItemUpdateTests(unittest.TestCase):
         self.assertEqual(saved['tag_details'],[{'name':'Manual','source':'manual'},{'name':'CAFÉ','source':'manual'}])
         self.assertEqual(BookmarkService(self.root).get(saved['id']),saved)
         self.assertEqual(self.service.search('Personalneedle',collection_id=collection['id'],tags=['cafe\u0301'])['items'],[saved])
-        self.assertEqual(self.service.counts(),{'all':1,'inbox':0,'favorites':1,'read_later':1})
+        self.assertEqual(self.service.counts(),{'all':1,'inbox':0,'favorites':1,'read_later':1,'trash':0})
 
     def test_stale_revision_reports_only_current_revision_without_partial_writes(self):
         saved=self.service.update(self.item['id'],1,{'notes':'Saved private text'})

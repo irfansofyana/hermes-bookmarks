@@ -1,11 +1,13 @@
 function createLibrary(React,adapter,components,styles){
  const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Input=components.Input||'input';
  const Navigation=createLibraryNavigation(React,adapter,components),Items=createLibraryItems(React,adapter,components),Form=createLibraryForm(React,adapter,components),Detail=createLibraryDetail(React,adapter,components);
+ const Dialog=createLibraryDialog(React,components);
  const defaults=()=>({query:'',view:'all',collectionId:null,tags:[],limit:50,offset:0,mode:'grid',selectedIds:[],scroll:0});
  return function Bookmarks({ctx,scope='dashboard',onAsk,onReady}={}){
   const [libraryId,setLibraryId]=useState(null),[query,setQuery]=useState(defaults),[page,setPage]=useState({items:[],total:0}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [form,setForm]=useState(null),[detail,setDetail]=useState(null),[revision,setRevision]=useState(0),[drawer,setDrawer]=useState(false),[search,setSearch]=useState(''),[identityRetry,setIdentityRetry]=useState(0),[narrow,setNarrow]=useState(false);
   const libraryRoot=useRef(null);
+  const [trashTarget,setTrashTarget]=useState(null),[trashBusy,setTrashBusy]=useState(false),[undoTrash,setUndoTrash]=useState(null);const trashLock=useRef(false);
   useEffect(()=>{if(typeof ResizeObserver==='undefined'||!libraryRoot.current)return;const observer=new ResizeObserver(entries=>{if(entries[0])setNarrow(entries[0].contentRect.width<=680);});observer.observe(libraryRoot.current.closest('.hb-workspace-frame')||libraryRoot.current);return()=>observer.disconnect();},[]);
   const live=useRef(true),generation=useRef(0),current=useRef(null),surface=useRef(null),restored=useRef(false),selectedItems=useRef(new Map()),updating=useRef(new Set());
   current.current={query,libraryId};
@@ -13,7 +15,7 @@ function createLibrary(React,adapter,components,styles){
   useEffect(()=>{live.current=true;let active=true;
    api('/library/identity').then(payload=>{if(!active)return;const id=payload.result.library_id;if(typeof id!=='string'||!id)throw Error('Library identity is unavailable.');
     const key=bookmarkLibraryKey(scope,id),saved=bookmarkLibraryViews.get(key)||defaults();
-    if(!['grid','list'].includes(saved.mode))saved.mode='grid';if(!['all','inbox','favorites','read_later'].includes(saved.view))saved.view='all';
+    if(!['grid','list'].includes(saved.mode))saved.mode='grid';if(!['all','inbox','favorites','read_later','trash'].includes(saved.view))saved.view='all';
     bookmarkLibraryViews.set(key,saved);setQuery(saved);setSearch(saved.query);setLibraryId(id);
    }).catch(error=>{if(active){setError(error.message);setLoading(false);}});
    return()=>{active=false;live.current=false;generation.current++;};
@@ -38,16 +40,23 @@ function createLibrary(React,adapter,components,styles){
    catch(error){if(live.current)setError(error.code==='conflict'?'This item changed elsewhere. Open it to review the saved version.':error.message);}
    finally{updating.current.delete(item.id);}
   }
+  async function trashChange(item,restore=false){
+   if(trashLock.current)return;trashLock.current=true;setTrashBusy(true);
+   try{const result=await api('/items/'+encodeURIComponent(item.id)+(restore?'/restore':'/trash'),{method:'POST',body:{expected_revision:item.revision}});
+    if(live.current){setTrashTarget(null);setDetail(null);setUndoTrash(restore?null:result.result);setNotice(restore?'Item restored.':'Moved to trash.');refresh();}}
+   catch(error){if(live.current){setError(error.code==='conflict'?'This item changed elsewhere. Reload the library before trying again.':error.message);setTrashTarget(null);}}
+   finally{trashLock.current=false;if(live.current)setTrashBusy(false);}
+  }
   function saved(result){setForm(null);setNotice(result.receipt?.outcome==='duplicate'?'Already saved. Your staged fields were not applied.':'Saved to your library.');refresh();if(result.reopenEdit)setForm({item:result.item});else if(result.openExisting)setDetail(result.item.id);}
   function askSelection(){const items=query.selectedIds.map(id=>selectedItems.current.get(id)||{id,title:id});onAsk?.(items.slice(0,20));if(items.length>20)setNotice('Only the first 20 selected references were prepared. Nothing was sent.');}
-  const heading=query.collectionId?'Collection · includes descendants':({all:'All items',inbox:'Inbox',favorites:'Favorites',read_later:'Read later'})[query.view];
+  const heading=query.collectionId?'Collection · includes descendants':({all:'All items',inbox:'Inbox',favorites:'Favorites',read_later:'Read later',trash:'Trash'})[query.view];
   const navigationProps={ctx,scope,libraryId,query,onQueryChange:change,onChanged:refresh,revision,narrow,drawer,onDrawerClose:()=>setDrawer(false)};
   return h('section',{ref:libraryRoot,className:'hb-library','aria-label':'Bookmarks'},
    h('div',{className:'hb-library-topbar'},h(Button,{type:'button','aria-label':'Toggle library navigation','aria-expanded':drawer,onClick:()=>setDrawer(open=>!open)},'☰'),
     h('form',{className:'hb-search',onSubmit:event=>{event.preventDefault();change({query:search});}},h(Input,{type:'search',name:'query','aria-label':'Search bookmarks',value:search,placeholder:'Search your library…',onChange:event=>setSearch(event.target.value),onInput:event=>setSearch(event.currentTarget.value)}),h(Button,{type:'submit'},'Search')),
     h(Button,{type:'button',className:'hb-primary',disabled:!libraryId,onClick:()=>{setDetail(null);setForm({item:null});}},'Add')),
    error&&h('div',{role:'alert',className:'hb-error'},error,h(Button,{type:'button',onClick:refresh},'Retry library')),
-   notice&&h('p',{role:'status',className:'hb-notice'},notice),
+   notice&&h('p',{role:'status',className:'hb-notice'},notice,undoTrash&&h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(undoTrash,true)},'Undo trash')),
    h('div',{className:'hb-library-layout','data-navigation-open':drawer},libraryId&&h(Navigation,navigationProps),
     h('main',{className:'hb-library-content',ref:surface,onScroll:event=>{query.scroll=event.currentTarget.scrollTop;}},
      h('div',{className:'hb-library-heading'},h('div',null,h('h1',null,heading),h('p',{className:'hb-muted',role:'status'},loading?'Loading library…':page.total+' saved items')),
@@ -56,8 +65,9 @@ function createLibrary(React,adapter,components,styles){
      query.selectedIds.length>0&&h('div',{className:'hb-selection-bar'},h('span',null,query.selectedIds.length+' selected'),h(Button,{type:'button',onClick:askSelection},'Ask about selection'),h(Button,{type:'button',onClick:()=>setQuery(previous=>({...previous,selectedIds:[]}))},'Clear selection')),
      query.collectionId&&page.items.length>0&&h(Button,{type:'button',onClick:()=>{onAsk?.(page.items.slice(0,20));setNotice('Prepared up to 20 visible item references. Nothing was sent.');}},'Ask about this collection'),
      !loading&&!page.items.length&&h('div',{className:'hb-empty'},h('h2',null,query.query||query.tags.length?'No matching items':'Nothing here yet'),h('p',null,'Save something worth keeping, or try a different filter.')),
-     h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
+     h(Items,{ctx,scope,page,query,onQueryChange:change,onOpen:id=>setDetail(id),onAsk,onUpdate:update,onTrash:item=>item.deleted_at?trashChange(item,true):setTrashTarget(item),selection:query.selectedIds,onSelectionChange:select,onTag:tag=>change({tags:query.tags.includes(tag)?query.tags:[...query.tags,tag]})}))),
 
+   trashTarget&&h(Dialog,{title:'Move to trash?',description:'Notes and images are kept. You can restore this item later.',onCloseRequest:()=>{if(!trashBusy)setTrashTarget(null);}},h('p',null,bookmarkItemName(trashTarget)),h(Button,{type:'button',disabled:trashBusy,onClick:()=>setTrashTarget(null)},'Cancel'),h(Button,{type:'button',disabled:trashBusy,onClick:()=>trashChange(trashTarget)},trashBusy?'Moving…':'Move to trash')),
    form&&h(Form,{key:form.item?JSON.stringify([form.item.id,form.item.revision]):'new',ctx,scope,libraryId,item:form.item,defaultCollection:query.collectionId,onSaved:saved,onClose:()=>setForm(null)}),
    detail&&!form&&h(Detail,{key:detail,ctx,scope,libraryId,itemId:detail,onEdit:item=>{setDetail(null);setForm({item});},onAsk,onClose:()=>setDetail(null)}));
  };

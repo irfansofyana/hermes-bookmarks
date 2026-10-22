@@ -41,9 +41,11 @@ SPECS = {
     'bookmark_attachment_get': ('Read owned attachment metadata by ID. Returned API reference still requires host authentication.',
         {'asset_id':ASSET}, ['asset_id']),
     'bookmark_save': ('Save a link or owned image with metadata. Links queue configured enrichment; page text may be sent to the library model and incur charges. Standalone image analysis is not configured. Use an operation key to reconcile uncertain writes.',CAPTURE,[]),
+    'bookmark_delete': ('Move one item into recoverable trash at its expected revision. Does not delete files.',{'item_id':ID,'expected_revision':REVISION},['item_id','expected_revision']),
+    'bookmark_restore': ('Restore one trashed item without triggering inference.',{'item_id':ID,'expected_revision':REVISION},['item_id','expected_revision']),
     'bookmark_get': ('Read full saved detail without fetching a page or calling a model.', {'item_id':ID},['item_id']),
     'bookmark_search': ('Literal search across saved metadata, notes, summaries and tags. All organization predicates combine with AND.',
-        {'query':text(2000),**PAGING,'view':{'type':'string','enum':['all','inbox','favorites','read_later']},'collection_id':COLLECTION,'tags':TAGS},[]),
+        {'query':text(2000),**PAGING,'view':{'type':'string','enum':['all','inbox','favorites','read_later','trash']},'collection_id':COLLECTION,'tags':TAGS},[]),
     'bookmark_update': ('Atomically edit saved metadata, notes, tags and image associations at an expected revision. Source is immutable.',
         {'item_id':ID,'expected_revision':REVISION,'changes':object_rule(ITEM_CHANGES)},['item_id','expected_revision','changes']),
     'bookmark_note_update': ('Replace or explicitly append personal Markdown notes at an expected revision. Does not regenerate the AI summary.',
@@ -120,7 +122,7 @@ def execute(name, params, service_factory=get_service):
                 payload['receipt']=saved['receipt']
             return payload
         operations={
-            'bookmark_get':service.get, 'bookmark_search':service.search,
+            'bookmark_get':service.get, 'bookmark_delete':service.trash, 'bookmark_restore':service.restore, 'bookmark_search':service.search,
             'bookmark_update':service.update, 'bookmark_note_update':service.note_update,
             'bookmark_capture_status':service.capture_status,
             'bookmark_collection_list':service.collection_list, 'bookmark_collection_create':service.collection_create,

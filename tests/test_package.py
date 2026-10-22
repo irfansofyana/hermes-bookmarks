@@ -19,7 +19,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
         dashboard = json.loads((ROOT / 'dashboard/manifest.json').read_text())
         self.assertEqual(native['name'], dashboard['name'])
         self.assertEqual(native['version'], dashboard['version'])
-        self.assertEqual(native['provides_tools'], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_get', 'bookmark_search',
+        self.assertEqual(native['provides_tools'], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
             'bookmark_library_identity', 'bookmark_counts'])
@@ -45,7 +45,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
                                   get_config=lambda key, default=None: default, on_unload=cleanups.append)
         self.addCleanup(lambda: [f() for f in reversed(cleanups)])
         module.register(context)
-        self.assertEqual([t['name'] for t in tools], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_get', 'bookmark_search',
+        self.assertEqual([t['name'] for t in tools], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
             'bookmark_library_identity', 'bookmark_counts'])

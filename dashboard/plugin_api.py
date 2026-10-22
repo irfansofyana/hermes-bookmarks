@@ -129,6 +129,16 @@ async def update_item(item_id: str, request: Request):
     return await metadata_request(request,'bookmark_update',{'item_id':item_id})
 
 
+@router.post('/items/{item_id}/trash')
+async def trash_item(item_id: str, request: Request):
+    return await metadata_request(request,'bookmark_delete',{'item_id':item_id})
+
+
+@router.post('/items/{item_id}/restore')
+async def restore_item(item_id: str, request: Request):
+    return await metadata_request(request,'bookmark_restore',{'item_id':item_id})
+
+
 @router.post('/items/{item_id}/notes')
 async def update_notes(item_id: str, request: Request):
     return await metadata_request(request,'bookmark_note_update',{'item_id':item_id})

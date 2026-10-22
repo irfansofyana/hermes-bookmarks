@@ -39,7 +39,7 @@ class LibraryQueryTests(unittest.TestCase):
         page=self.service.search('Needle',view='favorites',collection_id=parent['id'],tags=[' ai ','READING'])
         self.assertEqual(page['total'],1)
         self.assertEqual(page['items'][0]['url'],'https://example.org/0')
-        self.assertEqual(self.service.counts(),{'all':4,'inbox':1,'favorites':3,'read_later':1})
+        self.assertEqual(self.service.counts(),{'all':4,'inbox':1,'favorites':3,'read_later':1,'trash':0})
         self.assertEqual(self.service.search('Personalneedle')['total'],4)
         self.assertEqual(self.service.search('Descriptionneedle')['total'],4)
         self.assertEqual(self.service.search('',view='inbox')['total'],1)
@@ -65,13 +65,13 @@ class LibraryQueryTests(unittest.TestCase):
         identity=self.service.identity()
         self.assertEqual(set(identity),{'library_id'})
         self.assertEqual(BookmarkService(self.root).identity(),identity)
-        self.assertEqual(self.service.counts(),{'all':0,'inbox':0,'favorites':0,'read_later':0})
+        self.assertEqual(self.service.counts(),{'all':0,'inbox':0,'favorites':0,'read_later':0,'trash':0})
         self.service.search(); self.service.tag_list(); self.service.collection_list()
         with self.service._storage._transaction() as c: self.assertEqual(c.execute('SELECT count(*) FROM jobs').fetchone()[0],0)
         with tempfile.TemporaryDirectory() as other: self.assertNotEqual(BookmarkService(Path(other)).identity(),identity)
 
     def test_invalid_filter_types_and_unknown_collection_are_rejected(self):
-        for kwargs in ({'view':'trash'},{'view':False},{'tags':'AI'},{'tags':['']},{'collection_id':False}):
+        for kwargs in ({'view':'unknown'},{'view':False},{'tags':'AI'},{'tags':['']},{'collection_id':False}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValidationError): self.service.search('',**kwargs)
         with self.assertRaises(NotFoundError): self.service.search('',collection_id='missing')
         for method in (self.service.tag_list,self.service.collection_list):

@@ -56,6 +56,14 @@ class BookmarkService:
         from .items import ItemStore
         return ItemStore(self._storage).note_update(item_id, expected_revision, text, mode)
 
+    def trash(self, item_id, expected_revision):
+        from .trash import transition
+        return transition(self._storage,item_id,expected_revision,deleted=True)
+
+    def restore(self, item_id, expected_revision):
+        from .trash import transition
+        return transition(self._storage,item_id,expected_revision,deleted=False)
+
     def identity(self):
         with self._storage._transaction() as connection:
             row = connection.execute("SELECT value FROM library_config WHERE key='library_id'").fetchone()

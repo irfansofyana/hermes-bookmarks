@@ -38,13 +38,13 @@ def validate_result(result):
 
 def active(connection, job):
     return connection.execute('''SELECT 1 FROM items WHERE id=?
-        AND enrichment_job_id=? AND enrichment_generation=?''',
+        AND deleted_at IS NULL AND enrichment_job_id=? AND enrichment_generation=?''',
         (job['item_id'],job['id'],job['generation'])).fetchone() is not None
 
 
 def update_status(connection, job, state):
     connection.execute('''UPDATE items SET enrichment_status=? WHERE id=?
-        AND enrichment_job_id=? AND enrichment_generation=?''',
+        AND deleted_at IS NULL AND enrichment_job_id=? AND enrichment_generation=?''',
         (state,job['item_id'],job['id'],job['generation']))
 
 
@@ -70,6 +70,7 @@ class JobQueue:
         with self.storage._transaction(write=True) as c:
             item=c.execute('SELECT * FROM items WHERE id=?',(item_id,)).fetchone()
             if item is None: raise NotFoundError()
+            if item['deleted_at'] is not None: raise ValueError('Item is trashed')
             if item['kind']!='link': raise ValueError('Image enrichment is not configured')
             if item['revision']!=revision: raise ValueError('Revision changed')
             job=c.execute('SELECT * FROM jobs WHERE item_id=? AND revision=?',(item_id,revision)).fetchone()
