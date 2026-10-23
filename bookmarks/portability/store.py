@@ -41,7 +41,7 @@ class PortabilityStore:
  @contextmanager
  def _file(self,name,mode='rb',folder=None,exclusive=False):
   # Names are generated IDs with a fixed suffix, never values from an archive.
-  if not re.fullmatch(r'[a-f0-9]{32}\.(blob|part|ready)',name):raise ValidationError()
+  if not re.fullmatch(r'[a-f0-9]{32}\.(blob|part|ready|asset-part)',name):raise ValidationError()
   directory=self.folder if folder is None else folder
   if directory.is_symlink() or not directory.is_dir():raise StorageError()
   flags=os.O_RDONLY if mode=='rb' else os.O_RDWR
@@ -57,6 +57,40 @@ class PortabilityStore:
   except (OSError,ValueError):raise StorageError() from None
   finally:
    if descriptor is not None:os.close(descriptor)
+
+ def _asset_stage(self,restore_id,asset_id):
+  identifier(restore_id);identifier(asset_id)
+  # Separate suffix from export/upload artifacts; the durable claim owns this
+  # deterministic temporary identity even after process death mid-write.
+  return digest_bytes((restore_id+asset_id).encode())[:32]+'.asset-part'
+
+ def _remove_asset_stage(self,stage,target):
+  if not stage.exists() and not stage.is_symlink():return
+  info=stage.lstat()
+  if not stat.S_ISREG(info.st_mode):raise StorageError()
+  # Publication uses no-clobber hard linking. Death after link but before
+  # unlink leaves two names for exactly this inode; never accept other links.
+  if info.st_nlink!=1:
+   try:final=target.lstat()
+   except OSError:raise StorageError() from None
+   if info.st_nlink!=2 or not stat.S_ISREG(final.st_mode) or (info.st_dev,info.st_ino)!=(final.st_dev,final.st_ino):raise StorageError()
+  stage.unlink()
+
+ def _publish_asset(self,folder,key,raw,restore_id):
+  stage=folder/self._asset_stage(restore_id,key);target=folder/(key+'.blob')
+  try:
+   if target.exists() or target.is_symlink():
+    self._remove_asset_stage(stage,target)
+    with self._file(key+'.blob',folder=folder) as handle:
+     if digest_bytes(handle.read(10*1024*1024+1))!=digest_bytes(raw):raise StorageError()
+    return
+   # Partial bytes are only ever stored under the claim-owned temporary name.
+   # A retry may truncate that name, never a published/unknown destination.
+   with self._file(stage.name,'r+b',folder=folder,exclusive=not stage.exists()) as handle:
+    handle.truncate(0);handle.write(raw);handle.flush();os.fsync(handle.fileno())
+   os.link(stage,target,follow_symlinks=False)  # Atomic publication, no overwrite.
+   stage.unlink()
+  except OSError:raise StorageError() from None
 
  def _sync_directory(self,directory):
   # A synced file alone does not make its created/renamed directory entry
@@ -111,10 +145,12 @@ class PortabilityStore:
    folder=self.root/'assets'
    for claim in claims:
     identifier(claim['asset_id']);path=folder/(claim['asset_id']+'.blob')
+    self._remove_asset_stage(folder/self._asset_stage(claim['restore_id'],claim['asset_id']),path)
     if path.exists() and not path.is_symlink():
      with self._file(claim['asset_id']+'.blob',folder=folder) as handle:
       if digest_bytes(handle.read(10*1024*1024+1))!=claim['digest']:continue
      path.unlink()
+    self._sync_directory(folder)
     c.execute('DELETE FROM portability_asset_claims WHERE asset_id=? AND restore_id=?',(claim['asset_id'],claim['restore_id']))
    # Retain immutable receipt identities. Expired reads fail even when metadata remains.
 
@@ -289,6 +325,8 @@ class PortabilityStore:
     if claim and (claim['restore_id']!=restore_id or claim['digest']!=h):raise ConflictError()
     if not claim:
      if (asset_folder/(key+'.blob')).exists() or (asset_folder/(key+'.blob')).is_symlink():raise ConflictError()
+     stage=asset_folder/self._asset_stage(restore_id,key)
+     if stage.exists() or stage.is_symlink():raise ConflictError()
      c.execute('INSERT INTO portability_asset_claims VALUES(?,?,?)',(key,restore_id,h))
   with self.storage._transaction(write=True) as c:
    prior=c.execute('SELECT * FROM portability_restores WHERE request_id=?',(request_id,)).fetchone()
@@ -296,12 +334,7 @@ class PortabilityStore:
    self._uploaded(c,upload['id'])
    if not empty(c):raise ConflictError()
    for key,raw in assets.items():
-    target=asset_folder/(key+'.blob')
-    if target.exists() or target.is_symlink():
-     with self._file(key+'.blob',folder=asset_folder) as handle:
-      if digest_bytes(handle.read(10*1024*1024+1))!=digest_bytes(raw):raise StorageError()
-    else:
-     with self._file(key+'.blob','r+b',folder=asset_folder,exclusive=True) as handle:handle.write(raw);handle.flush();os.fsync(handle.fileno())
+    self._publish_asset(asset_folder,key,raw,restore_id)
    self._sync_directory(asset_folder);self._sync_directory(self.root)
    restore_content(c,data)
    report={'id':restore_id,'state':'succeeded','counts':{key:len(value) for key,value in data.items() if isinstance(value,list)}}
