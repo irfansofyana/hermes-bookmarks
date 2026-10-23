@@ -58,6 +58,19 @@ class PortabilityStore:
   finally:
    if descriptor is not None:os.close(descriptor)
 
+ def _sync_directory(self,directory):
+  # A synced file alone does not make its created/renamed directory entry
+  # durable. Refuse readiness/content commit if the durability barrier fails.
+  if directory.is_symlink():raise StorageError()
+  descriptor=None
+  try:
+   descriptor=os.open(directory,os.O_RDONLY|getattr(os,'O_DIRECTORY',0)|getattr(os,'O_NOFOLLOW',0))
+   if not stat.S_ISDIR(os.fstat(descriptor).st_mode):raise StorageError()
+   os.fsync(descriptor)
+  except OSError:raise StorageError() from None
+  finally:
+   if descriptor is not None:os.close(descriptor)
+
  def _path(self,key,suffix):
   identifier(key);path=self.folder/(key+'.'+suffix)
   if self.folder.is_symlink() or path.is_symlink():raise StorageError()
@@ -129,7 +142,7 @@ class PortabilityStore:
    except ValueError:raise ValidationError() from None
    size,digest=self._hash(key,'part')
    with self._file(key+'.part','r+b') as handle:handle.flush();os.fsync(handle.fileno())
-   os.replace(target,self._path(key,'ready'))
+   os.replace(target,self._path(key,'ready'));self._sync_directory(self.folder);self._sync_directory(self.root)
    metadata={'format':format,'format_version':1 if format=='bundle' else None,'filename':'hermes-bookmarks-backup.zip' if format=='bundle' else 'hermes-bookmarks.html',
     'mime_type':'application/zip' if format=='bundle' else 'text/html',**details}
    with self.storage._transaction(write=True) as c:
@@ -172,6 +185,7 @@ class PortabilityStore:
     return self._metadata(self._operation(c,request_id,'upload',request=True))
    key=uuid4().hex
    with self._file(key+'.part','r+b',exclusive=True) as handle:handle.flush();os.fsync(handle.fileno())
+   self._sync_directory(self.folder);self._sync_directory(self.root)
    c.execute('INSERT INTO portability_ops(id,kind,request_id,args,state,pid,size,digest,expires_at) VALUES(?,?,?,?,?,?,?,?,?)',(key,'upload',request_id,args,'uploading',os.getpid(),size,digest,time.time()+TTL))
    return self._metadata(self._operation(c,key,'upload'))
 
@@ -288,6 +302,7 @@ class PortabilityStore:
       if digest_bytes(handle.read(10*1024*1024+1))!=digest_bytes(raw):raise StorageError()
     else:
      with self._file(key+'.blob','r+b',folder=asset_folder,exclusive=True) as handle:handle.write(raw);handle.flush();os.fsync(handle.fileno())
+   self._sync_directory(asset_folder);self._sync_directory(self.root)
    restore_content(c,data)
    report={'id':restore_id,'state':'succeeded','counts':{key:len(value) for key,value in data.items() if isinstance(value,list)}}
    c.execute("UPDATE portability_restores SET state='succeeded',result=? WHERE id=?",(encoded(report),restore_id))

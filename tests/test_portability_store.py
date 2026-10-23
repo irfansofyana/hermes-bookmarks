@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -84,6 +85,33 @@ class PortabilityStoreTests(unittest.TestCase):
   self.assertTrue(claimed.exists())
   with patch('bookmarks.portability.store.time.time',return_value=u['expires_at']+1):ts.upload_create(1,'a'*64,str(uuid4()))
   self.assertFalse(claimed.exists());self.assertEqual(unrelated.read_bytes(),b'Keep unrelated')
+ def test_export_directory_durability_failure_never_marks_artifact_ready(self):
+  import stat
+  from unittest.mock import patch
+  from bookmarks.errors import StorageError
+  original=os.fsync
+  def fail_directory(fd):
+   if stat.S_ISDIR(os.fstat(fd).st_mode):raise OSError('synthetic directory sync failure')
+   return original(fd)
+  rid=str(uuid4())
+  with patch('bookmarks.portability.store.os.fsync',side_effect=fail_directory):
+   with self.assertRaises(StorageError):self.store.export_create(request_id=rid)
+  self.assertEqual(self.store.export_get(rid)['state'],'failed')
+ def test_restore_directory_durability_failure_precedes_any_content_commit(self):
+  import stat
+  from unittest.mock import patch
+  from bookmarks.errors import StorageError
+  from bookmarks.assets import AssetStore
+  asset=AssetStore(self.source._storage.database_path.parent).store_image((Path(__file__).parent/'fixtures/tiny.png').read_bytes(),'image/png')
+  target=BookmarkService(self.root/'target');ts=PortabilityStore(target._storage);u=self.transfer(self.export(),ts);p=ts.backup_preview(u['id']);original=os.fsync;rid=str(uuid4())
+  def fail_directory(fd):
+   if stat.S_ISDIR(os.fstat(fd).st_mode):raise OSError('synthetic directory sync failure')
+   return original(fd)
+  with patch('bookmarks.portability.store.os.fsync',side_effect=fail_directory):
+   with self.assertRaises(StorageError):ts.backup_restore(p['preview_id'],p['input_digest'],rid)
+  self.assertEqual(target.counts()['all'],0);self.assertEqual(ts.backup_restore_get(rid)['state'],'failed')
+  with target._storage._transaction() as c:self.assertEqual(c.execute('SELECT count(*) FROM assets').fetchone()[0],0)
+  self.assertEqual(ts.backup_restore(p['preview_id'],p['input_digest'],rid)['state'],'succeeded')
  def test_expired_export_and_upload_are_not_readable(self):
   from unittest.mock import patch
   a=self.export();u=self.store.upload_create(1,hashlib.sha256(b'x').hexdigest(),str(uuid4()))
