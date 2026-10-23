@@ -60,7 +60,7 @@ Public facade methods match names prefixed `export_`, `backup_upload_`, `backup_
 - [x] Targeted risky archive/transaction boundary review (after immutable backend commit), consume once, RED→GREEN justified findings.
 - [x] Final milestone review of adapters/UI/cross-layer contract, one author fix pass. No old whole-M1 loops.
 - [x] Exact logical roundtrip/file bytes, malicious archive corpus/faults/concurrent writes, Python3.11/3.14 and Node, deterministic build/syntax/diff, official isolated validator.
-- [ ] Update docs/STATUS/evidence, push existing draft PR and verify exact SHA runs and job conclusions. No merge/release/live deployment.
+- [x] Update docs/STATUS/evidence, push existing draft PR and verify exact SHA runs and job conclusions. No merge/release/live deployment.
 
 ## Review focus
 
