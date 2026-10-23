@@ -1,6 +1,6 @@
 # Portable export and safe full-library restore
 
-Date: 2026-10-23 (live local date checked). Status: proposed refinement of the approved full-product export requirement, awaiting written-design review. Existing hybrid execution method remains selected. This document does not claim implementation.
+Date: 2026-10-23 (live local date checked). Status: owner approved this written design and immediate implementation with “Gas langsung implementasi”. Existing hybrid execution method remains selected. This document does not claim implementation.
 
 Baseline inspected: `345e7d5fd6126f76415a05ec6a54d0fd0c4cc680`, existing `feat/m1-native-foundation` worktree. UX-first implementation and its review fix are complete. Owner asked to continue remaining scope. The restore-conflict question received no answer; the safe proposed default below is explicit, not represented as a user-selected answer.
 
