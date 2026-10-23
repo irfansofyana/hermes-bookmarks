@@ -33,6 +33,12 @@ class API:
    raw=response.read(200000)
    if len(raw)>=200000:raise ValueError('Unexpected unbounded response')
    return response.status,json.loads(raw)
+ def asset(self,asset_id):
+  request=urllib.request.Request(self.origin+'/assets/'+asset_id,headers={'X-Hermes-Session-Token':self.token})
+  with self.opener.open(request,timeout=30) as response:
+   content=response.read(10*1024*1024+1)
+   if len(content)>10*1024*1024:raise AssertionError('Asset exceeds public bound')
+   return content,response.headers.get_content_type()
  def call(self,route,body=None):
   status,payload=self.request(route,body)
   if status!=200 or payload.get('ok') is not True:raise AssertionError((route,status,payload.get('error',{}).get('code')))
@@ -68,15 +74,38 @@ def run(source,target,output):
     fields=['id','url','title','notes','description','summary','tags','tag_details','attachments','imported_sources','kind','collection_id','favorite','read_later','revision','deleted_at','created_at','updated_at']
     good('exact_saved_item_projection',all(row.get(key)==actual.get(key) for key in fields));compared+=1
     for asset in row['attachments']:
-     left=source.call('/assets/'+asset['asset_id']+'/preview');right=target.call('/assets/'+asset['asset_id']+'/preview');good('owned_asset_preview_bytes',left==right)
+     left=source.call('/assets/'+asset['asset_id']+'/preview');right=target.call('/assets/'+asset['asset_id']+'/preview');good('owned_asset_preview_bytes',left==right);good('exact_owned_asset_bytes_and_mime',source.asset(asset['asset_id'])==target.asset(asset['asset_id']))
    offset+=100
    if offset>=a['total']:break
  good('restored_nonempty_target_rejects_new_preview',target.request('/backups/preview',{'upload_id':upload['id']})[0]==409)
  html=source.call('/exports',{'format':'html','request_id':str(uuid4())});good('html_explicitly_lossy',bool(html['limitations']) and html['state']=='ready')
- report={'ok':True,'actual_authenticated_hosts':True,'provider_calls':False,'checks':checks,'compared_items':compared,'artifact_id':artifact['id'],'archive_size':len(content),'archive_digest':artifact['digest'],'restore_request_id':request,'restore_id':restored['id'],'target_identity':identity['library_id']}
+ report={'ok':True,'actual_authenticated_hosts':True,'provider_calls':False,'checks':checks,'compared_items':compared,'artifact_id':artifact['id'],'export_request_id':rid,'archive_size':len(content),'archive_digest':artifact['digest'],'restore_request_id':request,'restore_id':restored['id'],'target_identity':identity['library_id']}
+ Path(output).write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2));return report
+
+def reopen(source,target,previous,output):
+ record=json.loads(Path(previous).read_text());restored=target.call('/backups/requests/'+record['restore_request_id'])
+ assert restored['state']=='succeeded' and restored['id']==record['restore_id']
+ assert target.call('/library/identity')['library_id']==record['target_identity']
+ assert target.call('/counts')==source.call('/counts')
+ parts=[];offset=0
+ while offset<record['archive_size']:
+  chunk=source.call('/exports/'+record['artifact_id']+'?offset='+str(offset));parts.append(base64.b64decode(chunk['content_base64']));offset=chunk['next_offset']
+ assert hashlib.sha256(b''.join(parts)).hexdigest()==record['archive_digest']
+ compared=0;assets=set()
+ for view in ['all','trash']:
+  a=source.call('/items?view='+view+'&limit=100');b=target.call('/items?view='+view+'&limit=100');assert a['total']==b['total'] and a['total']<=100
+  assert a['items']==b['items']
+  for row in a['items']:
+   compared+=1
+   for asset in row['attachments']:
+    assert source.asset(asset['asset_id'])==target.asset(asset['asset_id']);assets.add(asset['asset_id'])
+ assert compared==record['compared_items']
+ report={'ok':True,'actual_authenticated_hosts':True,'mode':'restart_readback','compared_items':compared,'compared_owned_assets':len(assets),'full_item_projections_equal':True,'exact_asset_bytes_and_mime':True,'artifact_digest_persists':True,'restore_receipt_persists':True,'target_identity_preserved':True,'provider_calls':False}
  Path(output).write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2));return report
 
 if __name__=='__main__':
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--source-token-file',required=True);p.add_argument('--target',required=True);p.add_argument('--target-token-file',required=True);p.add_argument('--output',required=True);p.add_argument('--allow-write',action='store_true');a=p.parse_args()
- if not a.allow_write:p.error('Synthetic verification requires --allow-write')
- run(API(a.source,a.source_token_file),API(a.target,a.target_token_file),a.output)
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--source-token-file',required=True);p.add_argument('--target',required=True);p.add_argument('--target-token-file',required=True);p.add_argument('--output',required=True);p.add_argument('--allow-write',action='store_true');p.add_argument('--reopen');a=p.parse_args()
+ source=API(a.source,a.source_token_file);target=API(a.target,a.target_token_file)
+ if a.reopen:reopen(source,target,a.reopen,a.output)
+ elif a.allow_write:run(source,target,a.output)
+ else:p.error('Synthetic writes require --allow-write; use --reopen for read-only restart verification')

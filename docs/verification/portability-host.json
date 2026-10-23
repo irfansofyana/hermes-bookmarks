@@ -1,0 +1,114 @@
+{
+  "ok": true,
+  "actual_authenticated_hosts": true,
+  "provider_calls": false,
+  "checks": [
+    {
+      "check": "unauthorized_export_and_restore_rejected",
+      "ok": true
+    },
+    {
+      "check": "unauthorized_export_and_restore_rejected",
+      "ok": true
+    },
+    {
+      "check": "target_initially_empty",
+      "ok": true
+    },
+    {
+      "check": "artifact_ready",
+      "ok": true
+    },
+    {
+      "check": "export_receipt_idempotent",
+      "ok": true
+    },
+    {
+      "check": "export_lookup",
+      "ok": true
+    },
+    {
+      "check": "bounded_download_chunk",
+      "ok": true
+    },
+    {
+      "check": "full_download_integrity",
+      "ok": true
+    },
+    {
+      "check": "upload_exact_offset",
+      "ok": true
+    },
+    {
+      "check": "upload_resume_lookup",
+      "ok": true
+    },
+    {
+      "check": "preview_no_content_mutation",
+      "ok": true
+    },
+    {
+      "check": "restore_succeeded",
+      "ok": true
+    },
+    {
+      "check": "restore_idempotent",
+      "ok": true
+    },
+    {
+      "check": "restore_lookup",
+      "ok": true
+    },
+    {
+      "check": "target_identity_preserved",
+      "ok": true
+    },
+    {
+      "check": "item_page_counts_all",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "owned_asset_preview_bytes",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "owned_asset_preview_bytes",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "item_page_counts_trash",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "restored_nonempty_target_rejects_new_preview",
+      "ok": true
+    },
+    {
+      "check": "html_explicitly_lossy",
+      "ok": true
+    }
+  ],
+  "compared_items": 4,
+  "artifact_id": "bc53218ad092416da7e97ef5c79d3f6f",
+  "archive_size": 2079,
+  "archive_digest": "87ba54f287e6d561b228650e1d3a78e826ea8ae9599239f7c8d79bed9868bf3b",
+  "restore_request_id": "a05596c8-d469-4667-b317-c00da49205a7",
+  "restore_id": "4dce1f935332470480df5b2c94485375",
+  "target_identity": "65da73319db8295a93a13565c39319ac"
+}

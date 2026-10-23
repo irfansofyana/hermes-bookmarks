@@ -30,7 +30,7 @@ No active install/restart, merge/release, real data, credentials or model calls.
 - `upload_create(size,digest,request_id)` -> `{id,size,offset,digest,expires_at}`; `upload_chunk(upload_id,offset,content_base64)` monotonic exact/idempotent bytes -> same metadata.
 - `backup_preview(upload_id)` -> `{preview_id,input_digest,counts,empty_target,format_version,limitations}` verifies sealed uploaded bytes/domain; immutable staged upload retained. Existing target refused without writes. Stable preview per upload.
 - `backup_restore(preview_id,input_digest,request_id)` -> `{id,state,counts}` uses one final DB transaction and durable receipt, asset file publication preceding references. `backup_restore_get(request_id)` read-only reconciliation, not retry. No separate worker needed for bounded synchronous executor operations; no ad-hoc loops.
-- Portability schema for operation/upload/preview/restore receipts added migration 9 by parent in coordination with content child. File lock/DB serialization for chunk offsets; generated IDs, symlink refusal; expiry on every read, lazy cleanup ownership. No writable caller path.
+- Portability schema for operation/upload/preview/restore receipts added migration10 by parent after content migration9 in coordination with content child. File lock/DB serialization for chunk offsets; generated IDs, symlink refusal; expiry on every read, lazy cleanup ownership. No writable caller path.
 
 Public facade methods match names prefixed `export_`, `backup_upload_`, `backup_preview`, `backup_restore`, `backup_restore_get`. Native names `bookmark_export_create/get/read`, `bookmark_backup_upload_create/chunk`, `bookmark_backup_preview/restore/restore_get`. Chunk schemas bounded. HTTP `/exports`, `/exports/requests/{request_id}`, `/exports/{artifact_id}?offset=N`; `/backups/uploads`, `/backups/uploads/{upload_id}/chunks`, `/backups/preview`, `/backups/restore`, `/backups/requests/{request_id}`. All POST metadata bounded128KiB and strict. Portability namespace bypasses automatic worker activation.
 
@@ -48,7 +48,7 @@ Public facade methods match names prefixed `export_`, `backup_upload_`, `backup_
 
 ### 3. Durable artifact/upload/preview/restore orchestration (controller)
 - [ ] TDD stable requests, download chunks/digest/expiry, upload resume/idempotency/strict offsets, sealed staging tamper rejection, preview no content writes, final emptiness recheck and exact receipt retry/mismatch.
-- [ ] Implement store plus facade and operation tables in migration9; file publication before transaction content refs. Reject pre-existing destination/orphan collisions without deleting other's files; recover only exact known owned restore operation.
+- [ ] Implement store plus facade and operation tables in migration10 after content migration9; file publication before transaction content refs. Reject pre-existing destination/orphan collisions without deleting other's files; recover only exact known owned restore operation.
 - [ ] Failure injection on file/receipt/content commit; no partial content, no lost ownership; process restart readback. Full Python gate.
 
 ### 4. Thin adapters and UI

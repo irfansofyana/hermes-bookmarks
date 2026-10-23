@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "actual_native_registry": true,
+  "mode": "target",
+  "tools_exercised": [
+    "bookmark_backup_preview",
+    "bookmark_backup_restore",
+    "bookmark_backup_restore_get",
+    "bookmark_backup_upload_chunk",
+    "bookmark_backup_upload_create"
+  ],
+  "counts": {
+    "assets": 1,
+    "collections": 3,
+    "item_assets": 2,
+    "item_tags": 4,
+    "items": 4,
+    "sources": 1,
+    "tags": 4
+  },
+  "restore_id": "88587ee69e124d17bc82f11df21dd249",
+  "provider_calls": false
+}
