@@ -25,6 +25,22 @@
     {
       "port": 33157,
       "open": false
+    },
+    {
+      "port": 36897,
+      "open": false
+    },
+    {
+      "port": 32963,
+      "open": false
+    },
+    {
+      "port": 42387,
+      "open": false
+    },
+    {
+      "port": 39815,
+      "open": false
     }
   ]
 }

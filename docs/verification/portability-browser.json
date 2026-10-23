@@ -3,10 +3,10 @@
   "actual_dashboard": true,
   "synthetic": true,
   "provider_calls": false,
-  "artifact_id": "d63322e756544fa5b1c1a64df19b7c09",
-  "archive_digest": "0aca9df782074b9cb9f4e9f60794b0f25d59a9e72b4ff1a7197600e2cc4aee90",
-  "archive_size": 2081,
-  "restore_request_id": "a9403f3d-8520-4129-a54e-da7201ba5bff",
+  "artifact_id": "6d65384291db421797b9d7fa2ee8e5c9",
+  "archive_digest": "18ef6beb22e26151c04b5f5bced94653a16a3f1132c9862dd9259d43d793911f",
+  "archive_size": 2082,
+  "restore_request_id": "aec756e2-f551-4054-b007-8b93d1ccd68b",
   "rows": [
     {
       "check": "export",
@@ -63,7 +63,7 @@
     {
       "check": "actual_blob_download_integrity",
       "ok": true,
-      "size": 2081
+      "size": 2082
     },
     {
       "check": "restore-preview",
@@ -83,10 +83,10 @@
       "theme": "dark",
       "viewport": 390,
       "file": "bookmarks-data-restore-preview-dark-390.png",
-      "left": 6,
-      "right": 384,
-      "width": 378,
-      "height": 1088,
+      "left": 2.3046875,
+      "right": 387.6953125,
+      "width": 385.390625,
+      "height": 1087.265625,
       "overflow": false,
       "document_overflow": false,
       "text_color": "color(srgb 1 0.901961 0.796078)"
@@ -113,6 +113,5 @@
       "ok": true
     }
   ],
-  "page_errors": [],
-  "evidence_note": "Restore theme labels corrected from captured computed text color and direct screenshot inspection; target retained its independent dark Hermes Teal theme while source was switched to Nous Blue. No pixels or observed checks were synthesized."
+  "page_errors": []
 }

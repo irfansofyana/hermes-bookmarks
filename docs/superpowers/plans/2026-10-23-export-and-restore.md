@@ -37,29 +37,29 @@ Public facade methods match names prefixed `export_`, `backup_upload_`, `backup_
 ## Tasks
 
 ### 1. Content ownership, migration and atomic restore (scoped worker)
-- [ ] Write service-produced full-content roundtrip/migration tests; run RED before code.
-- [ ] Implement content projection/strict validation, migration9 content schema, source migration and import/read/search integration. Existing target rejected atomically; settings inert/no jobs; exact order/provenance and bytes metadata retained.
-- [ ] Focused tests: aliases/suppression/Unicode/empty folders/shared image/Trash/pending processing/history, concurrent target writer/revision preservation, foreign keys/rollback. Preserve source writer tests then commit owned files.
+- [x] Write service-produced full-content roundtrip/migration tests; run RED before code.
+- [x] Implement content projection/strict validation, migration9 content schema, source migration and import/read/search integration. Existing target rejected atomically; settings inert/no jobs; exact order/provenance and bytes metadata retained.
+- [x] Focused tests: aliases/suppression/Unicode/empty folders/shared image/Trash/pending processing/history, concurrent target writer/revision preservation, foreign keys/rollback. Preserve source writer tests then commit owned files.
 
 ### 2. Safe archive and lossy HTML codecs (scoped worker)
-- [ ] Write failing malicious ZIP/HTML/roundtrip tests against contract.
-- [ ] Implement bounded strict codec; no extractall. Archive size, ZIP duplicates/paths/flags/members/digest, JSON duplicate keys/NaN, supported version and image validation. HTML nested paths and explicit losses.
-- [ ] Run focused tests using synthetic tempfile artifacts under TMPDIR; report errors rather than fabricated success. Commit owned files.
+- [x] Write failing malicious ZIP/HTML/roundtrip tests against contract.
+- [x] Implement bounded strict codec; no extractall. Archive size, ZIP duplicates/paths/flags/members/digest, JSON duplicate keys/NaN, supported version and image validation. HTML nested paths and explicit losses.
+- [x] Run focused tests using synthetic tempfile artifacts under TMPDIR; report errors rather than fabricated success. Commit owned files.
 
 ### 3. Durable artifact/upload/preview/restore orchestration (controller)
-- [ ] TDD stable requests, download chunks/digest/expiry, upload resume/idempotency/strict offsets, sealed staging tamper rejection, preview no content writes, final emptiness recheck and exact receipt retry/mismatch.
-- [ ] Implement store plus facade and operation tables in migration10 after content migration9; file publication before transaction content refs. Reject pre-existing destination/orphan collisions without deleting other's files; recover only exact known owned restore operation.
-- [ ] Failure injection on file/receipt/content commit; no partial content, no lost ownership; process restart readback. Full Python gate.
+- [x] TDD stable requests, download chunks/digest/expiry, upload resume/idempotency/strict offsets, sealed staging tamper rejection, preview no content writes, final emptiness recheck and exact receipt retry/mismatch.
+- [x] Implement store plus facade and operation tables in migration10 after content migration9; file publication before transaction content refs. Reject pre-existing destination/orphan collisions without deleting other's files; recover only exact known owned restore operation.
+- [x] Failure injection on file/receipt/content commit; no partial content, no lost ownership; process restart readback. Full Python gate.
 
 ### 4. Thin adapters and UI
-- [ ] RED native/HTTP strict parity and no inference activation. Extend tool inventory, bridge dispatch, manifest, query decoding for offsets. All writes executor-backed and no new credentials.
-- [ ] TDD Data dialog chunked download/upload with explicit generate/preview/confirm, idempotent admission and read-only lost-ack lookup; bounded buffers/URL revocation and scoped epochs, cancellation never claims undo.
-- [ ] Build both emitted hosts; real SDK/browser auth/download/import-to-empty-restore synthetic probe plus native registry. Label untested Electron/remote separately.
+- [x] RED native/HTTP strict parity and no inference activation. Extend tool inventory, bridge dispatch, manifest, query decoding for offsets. All writes executor-backed and no new credentials.
+- [x] TDD Data dialog chunked download/upload with explicit generate/preview/confirm, idempotent admission and read-only lost-ack lookup; bounded buffers/URL revocation and scoped epochs, cancellation never claims undo.
+- [x] Build both emitted hosts; real SDK/browser auth/download/import-to-empty-restore synthetic probe plus native registry. Label untested Electron/remote separately.
 
 ### 5. Integrity review and release-development gate
-- [ ] Targeted risky archive/transaction boundary review (after immutable backend commit), consume once, RED→GREEN justified findings.
-- [ ] Final milestone review of adapters/UI/cross-layer contract, one author fix pass. No old whole-M1 loops.
-- [ ] Exact logical roundtrip/file bytes, malicious archive corpus/faults/concurrent writes, Python3.11/3.14 and Node, deterministic build/syntax/diff, official isolated validator.
+- [x] Targeted risky archive/transaction boundary review (after immutable backend commit), consume once, RED→GREEN justified findings.
+- [x] Final milestone review of adapters/UI/cross-layer contract, one author fix pass. No old whole-M1 loops.
+- [x] Exact logical roundtrip/file bytes, malicious archive corpus/faults/concurrent writes, Python3.11/3.14 and Node, deterministic build/syntax/diff, official isolated validator.
 - [ ] Update docs/STATUS/evidence, push existing draft PR and verify exact SHA runs and job conclusions. No merge/release/live deployment.
 
 ## Review focus
