@@ -19,6 +19,11 @@ const data=Buffer.from('Synthetic portable bytes — 中文');
 const artifact=(bytes=data)=>({id:'export-fixture',state:'ready',format:'bundle',filename:'bookmarks.zip',size:bytes.length,digest:digest(bytes),counts:{items:1},limitations:['No jobs or credentials.']});
 const read=(bytes=data,offset=0)=>({artifact_id:'export-fixture',offset,next_offset:bytes.length,eof:true,content_base64:bytes.subarray(offset).toString('base64'),size:bytes.length,digest:digest(bytes),filename:'bookmarks.zip',mime_type:'application/zip'});
 async function choose(app,bytes=data,custom={}){const file={name:'fixture.zip',size:bytes.length,lastModified:1,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),...custom};const input=app.field('Backup file');assert.ok(input,'Backup file control');Object.defineProperty(input,'files',{configurable:true,value:[file]});await React.act(async()=>input.dispatchEvent(new app.dom.window.Event('change',{bubbles:true})));return file;}
+for(const target of ['desktop','dashboard'])test(target+': ready export exposes the exact filename, byte size, format version and integrity digest',async()=>{
+ const helpers=fixture(),value={...artifact(),format_version:1};const app=await helpers.mount(target,{overrideApi:route=>route==='/exports'?ok(value):undefined});
+ try{await open(app,helpers);await helpers.click(helpers.button(app,'Generate export'),app);const text=app.element.querySelector('.hb-dialog-data').textContent;assert.match(text,/bookmarks\.zip/);assert.ok(text.includes(value.size+' bytes'));assert.ok(text.includes('Backup format version 1'));assert.ok(text.includes(value.digest));assert.equal(app.urls.created.length,0);
+ }finally{await app.close();}
+});
 const preview={preview_id:'preview-fixture',input_digest:digest(data),counts:{items:1,assets:0},format_version:1,empty_target:true,limitations:['No jobs or credentials restored.']};
 async function open(app,helpers){await helpers.click(helpers.button(app,'Data'),app);}
 async function settle(){for(let n=0;n<4;n++)await React.act(async()=>{await new Promise(resolve=>setImmediate(resolve));});}

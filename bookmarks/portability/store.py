@@ -130,7 +130,7 @@ class PortabilityStore:
    size,digest=self._hash(key,'part')
    with self._file(key+'.part','r+b') as handle:handle.flush();os.fsync(handle.fileno())
    os.replace(target,self._path(key,'ready'))
-   metadata={'format':format,'filename':'hermes-bookmarks-backup.zip' if format=='bundle' else 'hermes-bookmarks.html',
+   metadata={'format':format,'format_version':1 if format=='bundle' else None,'filename':'hermes-bookmarks-backup.zip' if format=='bundle' else 'hermes-bookmarks.html',
     'mime_type':'application/zip' if format=='bundle' else 'text/html',**details}
    with self.storage._transaction(write=True) as c:
     c.execute("UPDATE portability_ops SET state='ready',size=?,digest=?,metadata=? WHERE id=?",(size,digest,encoded(metadata),key))
