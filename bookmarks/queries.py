@@ -23,7 +23,7 @@ def search(connection, query, limit, offset, *, view, collection_id, tags):
     predicates = ['items.deleted_at IS NOT NULL' if view=='trash' else 'items.deleted_at IS NULL']; parameters = []; source = 'items'
     if query.strip():
         predicates.append("""(items.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?) OR
-            EXISTS (SELECT 1 FROM import_provenance p WHERE p.item_id=items.id AND
+            EXISTS (SELECT 1 FROM content_sources p WHERE p.item_id=items.id AND
                 (instr(lower(p.source_text),lower(?))>0 OR instr(lower(p.imported_summary),lower(?))>0)))""")
         parameters.extend(['"'+query.strip().replace('"','""')+'"',query.strip(),query.strip()])
     if view == 'inbox':

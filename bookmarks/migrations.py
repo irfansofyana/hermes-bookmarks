@@ -4,6 +4,8 @@ from sqlite3 import Connection
 from .errors import ConfigurationError
 from .library_schema import upgrade_library
 from .imports.schema import upgrade_imports
+from .portability.schema import upgrade_content
+from .portability.operations_schema import upgrade_operations
 
 
 MIGRATIONS = (
@@ -73,6 +75,8 @@ MIGRATIONS = (
         "DROP TABLE capture_operations_old",
     ),
     (upgrade_imports,),
+    (upgrade_content,),
+    (upgrade_operations,),
 )
 
 

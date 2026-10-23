@@ -63,7 +63,8 @@ class StorageTests(unittest.TestCase):
         service = BookmarkService(nested)
         self.assertEqual(service.search("")["total"], 0)
         with closing(sqlite3.connect(nested / "bookmarks.sqlite3")) as connection, connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 8)
+            from bookmarks.migrations import MIGRATIONS
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], len(MIGRATIONS))
             self.assertEqual(connection.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
     def test_upgrade_preserves_existing_id_revision_title_and_populates_fts(self):

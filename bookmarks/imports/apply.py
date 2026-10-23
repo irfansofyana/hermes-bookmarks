@@ -33,8 +33,9 @@ def apply_record(storage,c,staged,job,index,settings):
         saved=ItemStore(storage).capture(url=clean['url'],title=clean['title'],description=clean['description'],notes=clean['notes'],
             collection_id=parent,tags=clean['tags'],attachment_ids=clean['attachment_ids'],enrichment_settings=settings,_connection=c)
         key=saved['item']['id']
-        c.execute('''INSERT INTO import_provenance VALUES(?,?,?,?,?,?,?,?)''',
-            (key,job['id'],index,clean['source_id'],clean['provenance']['source'],clean['provenance']['locator'],clean['imported_summary'],clean['source_text']))
+        c.execute('''INSERT INTO content_sources(item_id,source_id,source,locator,imported_summary,source_text)
+            VALUES(?,?,?,?,?,?)''',
+            (key,clean['source_id'],clean['provenance']['source'],clean['provenance']['locator'],clean['imported_summary'],clean['source_text']))
         c.execute('RELEASE import_row')
         return 'imported',key,None,warnings
     except BookmarkError as error:
