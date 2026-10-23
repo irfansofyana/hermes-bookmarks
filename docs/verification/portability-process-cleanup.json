@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "owned_disposable_servers_stopped": true,
+  "ports": [
+    {
+      "port": 38561,
+      "open": false
+    },
+    {
+      "port": 46873,
+      "open": false
+    },
+    {
+      "port": 39497,
+      "open": false
+    },
+    {
+      "port": 44399,
+      "open": false
+    },
+    {
+      "port": 46437,
+      "open": false
+    }
+  ]
+}
