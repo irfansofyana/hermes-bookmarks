@@ -84,6 +84,38 @@ class BookmarkService:
         from .imports.preview import ImportStore
         return ImportStore(self._storage).cancel(job_id)
 
+    def export_create(self, format='bundle', include_trash=False, request_id=None):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).export_create(format,include_trash,request_id)
+
+    def export_get(self, request_id):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).export_get(request_id)
+
+    def export_read(self, artifact_id, offset=0):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).export_read(artifact_id,offset)
+
+    def backup_upload_create(self, size, digest, request_id):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).upload_create(size,digest,request_id)
+
+    def backup_upload_chunk(self, upload_id, offset, content_base64):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).upload_chunk(upload_id,offset,content_base64)
+
+    def backup_preview(self, upload_id):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).backup_preview(upload_id)
+
+    def backup_restore(self, preview_id, input_digest, request_id):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).backup_restore(preview_id,input_digest,request_id)
+
+    def backup_restore_get(self, request_id):
+        from .portability.store import PortabilityStore
+        return PortabilityStore(self._storage).backup_restore_get(request_id)
+
     def identity(self):
         with self._storage._transaction() as connection:
             row = connection.execute("SELECT value FROM library_config WHERE key='library_id'").fetchone()

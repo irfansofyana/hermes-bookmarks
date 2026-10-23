@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 async def activate_worker(request: Request):
+    path=request.url.path.split('/hermes-bookmarks',1)[-1]
+    if path.startswith(('/exports','/backups')):return
     bridge=sys.modules.get(BRIDGE_NAME)
     if bridge is not None:
         bridge.ensure_enrichment()
@@ -98,7 +100,12 @@ async def metadata_request(request, name, identity=None, *, max_bytes=128*1024):
         return invalid_request()
     if not isinstance(body,dict) or (identity and set(identity)&set(body)):
         return invalid_request()
-    return await run_in_threadpool(invoke,name,{**body,**(identity or {})})
+    params={**body,**(identity or {})}
+    if name.startswith(('bookmark_export_','bookmark_backup_')):
+        bridge=sys.modules.get(BRIDGE_NAME)
+        if bridge is not None:
+            return await bridge.portability_call(invoke,name,params)
+    return await run_in_threadpool(invoke,name,params)
 
 
 @router.get('/library/identity')
@@ -281,6 +288,38 @@ async def upload_asset(request: Request):
     payload=await run_in_threadpool(asset_call,'store_image',content,mime)
     return asset_response(payload)
 
+
+@router.post('/exports')
+async def create_export(request: Request):
+    return await metadata_request(request,'bookmark_export_create')
+
+@router.get('/exports/requests/{request_id}')
+def export_request(request_id: str, request: Request):
+    return query_response(request,'bookmark_export_get',identity={'request_id':request_id})
+
+@router.get('/exports/{artifact_id}')
+def export_read(artifact_id: str, request: Request):
+    return query_response(request,'bookmark_export_read',{'offset'},identity={'artifact_id':artifact_id})
+
+@router.post('/backups/uploads')
+async def backup_upload_create(request: Request):
+    return await metadata_request(request,'bookmark_backup_upload_create')
+
+@router.post('/backups/uploads/{upload_id}/chunks')
+async def backup_upload_chunk(upload_id: str, request: Request):
+    return await metadata_request(request,'bookmark_backup_upload_chunk',{'upload_id':upload_id})
+
+@router.post('/backups/preview')
+async def backup_preview(request: Request):
+    return await metadata_request(request,'bookmark_backup_preview')
+
+@router.post('/backups/restore')
+async def backup_restore(request: Request):
+    return await metadata_request(request,'bookmark_backup_restore')
+
+@router.get('/backups/requests/{request_id}')
+def backup_restore_request(request_id: str, request: Request):
+    return query_response(request,'bookmark_backup_restore_get',identity={'request_id':request_id})
 
 @router.get('/assets/{asset_id}/preview')
 def preview_asset(asset_id: str):

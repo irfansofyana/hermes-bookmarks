@@ -18,6 +18,14 @@ else:
     from bookmarks.errors import BookmarkError, ConfigurationError, StorageError
     from bookmarks.service import BookmarkService
 
+async def portability_call(function,*args,**kwargs):
+    # API adapters use the same cancellation-draining lane as native tools.
+    if __package__:
+        from .bookmarks.enrichment import _storage_call
+    else:
+        from bookmarks.enrichment import _storage_call
+    return await _storage_call(function,*args,**kwargs)
+
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
 _lock = RLock()
 _roots = {}

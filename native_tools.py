@@ -7,9 +7,11 @@ import re
 
 if __package__:
     from .bookmarks.errors import BookmarkError, ConflictError, ValidationError
+    from .bookmarks.enrichment import _storage_call
     from .runtime import get_service, dispatch, asset_operation, ensure_enrichment, ensure_imports
 else:
     from bookmarks.errors import BookmarkError, ConflictError, ValidationError
+    from bookmarks.enrichment import _storage_call
     from runtime import get_service, dispatch, asset_operation, ensure_enrichment, ensure_imports
 
 
@@ -72,6 +74,15 @@ SPECS = {
     'bookmark_job_get': ('Read this plugin import job and exact reconciled progress/results. Does not access chat sessions or enrichment jobs.',{'job_id':ID,**PAGING},['job_id']),
     'bookmark_job_cancel': ('Cancel remaining rows of one import. Already committed records are kept and reported.',{'job_id':ID},['job_id']),
     'bookmark_counts': ('Read whole-library All, Inbox, Favorites and Read later counts.',{},[]),
+    'bookmark_export_create': ('Generate an owned HTML export or full content backup. Contains private notes/images; no credentials/chat sessions/queued execution. No model calls.',
+        {'format':{'type':'string','enum':['html','bundle']},'include_trash':{'type':'boolean'},'request_id':OPERATION},['request_id']),
+    'bookmark_export_get': ('Read export request status without regenerating it. Artifacts expire after 24 hours with lazy cleanup.',{'request_id':OPERATION},['request_id']),
+    'bookmark_export_read': ('Read at most 32 KiB of an authenticated library artifact as base64. No server paths; verify full digest before saving.',{'artifact_id':ASSET,'offset':{'type':'integer','minimum':0,'maximum':536870912}},['artifact_id']),
+    'bookmark_backup_upload_create': ('Create resumable owned backup staging for explicitly supplied bytes, up to 512 MiB. Does not change library items.',{'size':{'type':'integer','minimum':1,'maximum':536870912},'digest':text(64,pattern='^[a-f0-9]{64}$'),'request_id':OPERATION},['size','digest','request_id']),
+    'bookmark_backup_upload_chunk': ('Append at most 32 KiB decoded backup bytes at an exact offset; identical replay is safe. Never reads local paths.',{'upload_id':ASSET,'offset':{'type':'integer','minimum':0,'maximum':536870912},'content_base64':text(43692)},['upload_id','offset','content_base64']),
+    'bookmark_backup_preview': ('Validate sealed backup and preview full restore into an empty library only. No item writes or inference.',{'upload_id':ASSET},['upload_id']),
+    'bookmark_backup_restore': ('Explicitly restore a validated backup only into an empty library. Atomic commit cannot be undone by closing; no credentials or queued AI replay.',{'preview_id':ASSET,'input_digest':text(64,pattern='^[a-f0-9]{64}$'),'request_id':OPERATION},['preview_id','input_digest','request_id']),
+    'bookmark_backup_restore_get': ('Read restore request receipt after uncertain acknowledgement; never starts or retries restoration.',{'request_id':OPERATION},['request_id']),
 }
 
 
@@ -130,6 +141,9 @@ def execute(name, params, service_factory=get_service):
                 payload['receipt']=saved['receipt']
             return payload
         operations={
+            'bookmark_export_create':service.export_create,'bookmark_export_get':service.export_get,'bookmark_export_read':service.export_read,
+            'bookmark_backup_upload_create':service.backup_upload_create,'bookmark_backup_upload_chunk':service.backup_upload_chunk,
+            'bookmark_backup_preview':service.backup_preview,'bookmark_backup_restore':service.backup_restore,'bookmark_backup_restore_get':service.backup_restore_get,
             'bookmark_get':service.get, 'bookmark_delete':service.trash, 'bookmark_restore':service.restore, 'bookmark_search':service.search,
             'bookmark_update':service.update, 'bookmark_note_update':service.note_update,
             'bookmark_capture_status':service.capture_status,
@@ -172,6 +186,8 @@ def register_tools(ctx):
                 # Only this public async lane can activate the registered owner
                 # after synchronous startup deferred for lack of a host loop.
                 if enrich: ensure_enrichment()
+            elif _name.startswith(('bookmark_export_','bookmark_backup_')):
+                result=await _storage_call(dispatch,_name,params)
             else:
                 result=await asyncio.to_thread(dispatch,_name,params)
             return json.dumps(result,ensure_ascii=False)

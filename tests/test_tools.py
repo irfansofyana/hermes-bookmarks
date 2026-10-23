@@ -131,7 +131,7 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(self.tools), {'bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
-            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts'})
+            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get'})
         for tool in self.tools.values():
             self.assertIs(tool['schema']['parameters']['additionalProperties'], False)
         self.assertEqual(self.tools['bookmark_search']['schema']['parameters']['properties']['limit']['maximum'], 100)
