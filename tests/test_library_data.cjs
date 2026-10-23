@@ -2,12 +2,12 @@
 // Emitted-host protocol tests. No real SDK/browser/download acceptance claim.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),Module=require('node:module');
 const React=require('react'),{createHash}=require('node:crypto');
-const root=path.resolve(__dirname,'..'),outputs=new Map();
+const root=path.resolve(__dirname,'..');
 function fixture(){
- outputs.clear();const builder=path.join(root,'scripts/build-ui.cjs'),req=Module.createRequire(builder);
- vm.runInNewContext(fs.readFileSync(builder,'utf8'),{require:name=>name==='node:fs'?{...fs,writeFileSync:(file,value)=>outputs.set(file,value),mkdirSync:()=>{}}:req(name),__dirname:path.dirname(builder),console:{log(){}},process:{argv:[]}});
+ // Exercise the bytes that actually ship. Rebuilding belongs to the separate
+ // deterministic build gate, never to a test fixture that can mask stale output.
  const filename=path.join(__dirname,'helpers/emitted-client.cjs'),m=new Module(filename,module);m.filename=filename;m.paths=module.paths;
- m.require=name=>name==='node:fs'?{...fs,readFileSync:(file,...args)=>outputs.get(path.resolve(file))??fs.readFileSync(file,...args)}:Module.createRequire(filename)(name);
+ m.require=Module.createRequire(filename);
  let source=fs.readFileSync(filename,'utf8');
  source=source.replace("const assert=require", "const urls={created:[],revoked:[],blobs:[]}; class FixtureURL extends URL { static createObjectURL(blob){urls.blobs.push(blob);const id='blob:fixture-'+urls.created.length;urls.created.push(id);return id;} static revokeObjectURL(id){urls.revoked.push(id);} }\nconst assert=require");
  source=source.replace('URL,URLSearchParams,TextEncoder,btoa,Uint8Array','URL:FixtureURL,URLSearchParams,TextEncoder,btoa,atob,Blob,Uint8Array');
@@ -152,6 +152,25 @@ for(const target of ['desktop','dashboard'])test(target+': Generate is separate 
  await helpers.click(helpers.button(app,'Download export'),app);await until(()=>app.urls.created.length===1);assert.deepEqual(app.urls.revoked,app.urls.created);assert.equal(Buffer.from(await app.urls.blobs[0].arrayBuffer()).equals(data),true);
  assert.equal(app.calls.some(c=>c.method==='prompt.submit'),false);assert.deepEqual(app.apiCalls.find(c=>c.route==='/exports').init.body.format,'bundle');
  }finally{await app.close();}
+});
+for(const target of ['desktop','dashboard'])test(target+': read-only inspected export downloads that exact snapshot without generation',async()=>{
+ const helpers=fixture(),app=await helpers.mount(target,{overrideApi:route=>route==='/exports/requests/saved-export'?ok(artifact()):route.startsWith('/exports/export-fixture?')?ok(read()):undefined});
+ try{await open(app,helpers);await helpers.typeField(app,'Operation request ID','saved-export');await helpers.click(helpers.button(app,'Inspect operation'),app);assert.equal(app.apiCalls.filter(c=>c.init?.method==='POST').length,0);assert.match(app.element.textContent,new RegExp(digest(data)));await helpers.click(helpers.button(app,'Download inspected export'),app);await until(()=>app.urls.created.length===1);assert.equal(Buffer.from(await app.urls.blobs[0].arrayBuffer()).equals(data),true);assert.deepEqual(app.urls.created,app.urls.revoked);assert.equal(app.apiCalls.some(c=>c.route==='/exports'),false);
+ }finally{await app.close();}
+});
+for(const target of ['desktop','dashboard'])test(target+': confirmed failed restore permits only explicit same-request recovery',async()=>{
+ const helpers=fixture(),requests=[];let release,lookups=0;const app=await helpers.mount(target,{overrideApi:(route,init)=>{
+  if(route==='/backups/uploads')return ok({id:'upload-fixture',size:data.length,digest:digest(data),offset:data.length});
+  if(route==='/backups/preview')return ok(preview);
+  if(route==='/backups/restore'){requests.push({...init.body});if(requests.length===1)throw Error('Lost failed-commit response');return new Promise(resolve=>release=resolve);}
+  if(route.startsWith('/backups/requests/')){lookups++;return lookups===1?{ok:false,error:{code:'not_found',message:'Unknown'}}:ok({id:'restore-fixture',state:'failed',counts:{}});}
+ }});
+ try{await open(app,helpers);await choose(app);await helpers.click(helpers.button(app,'Upload and preview backup'),app);await until(()=>!!helpers.button(app,'Restore backup'));await helpers.click(app.field('Confirm empty-library restore'),app);await helpers.click(helpers.button(app,'Restore backup'),app);
+  assert.equal(!!helpers.button(app,'Retry failed restore'),false);await helpers.click(helpers.button(app,'Check restore request'),app);assert.equal(!!helpers.button(app,'Retry failed restore'),false);assert.equal(requests.length,1);
+  await helpers.click(helpers.button(app,'Check restore request'),app);assert.equal(helpers.button(app,'Retry failed restore')?.disabled,false,'Exact failed receipt must enable deliberate recovery');assert.equal(requests.length,1);assert.equal(app.field('Backup file').disabled,true);
+  await helpers.click(helpers.button(app,'Close data'),app);await open(app,helpers);assert.match(app.element.textContent,/fixture.zip/);await helpers.click(helpers.button(app,'Retry failed restore'),app);assert.deepEqual(requests[1],requests[0]);assert.equal(helpers.button(app,'Check restore request').disabled,true);assert.equal(!!helpers.button(app,'Retry failed restore'),false);
+  await React.act(async()=>release(ok({id:'restore-fixture',state:'succeeded',counts:{items:1}})));assert.match(app.element.textContent,/Restore succeeded/);assert.equal(requests.length,2);
+ }finally{release?.(ok({id:'restore-fixture',state:'succeeded',counts:{items:1}}));await app.close();}
 });
 for(const target of ['desktop','dashboard'])test(target+': bounded upload verifies full file and previews before an explicitly confirmed restore',async()=>{
  const helpers=fixture(),posts=[];let uploadDigest;const app=await helpers.mount(target,{overrideApi:(route,init)=>{

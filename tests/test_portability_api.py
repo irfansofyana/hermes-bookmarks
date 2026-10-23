@@ -17,6 +17,19 @@ class PortabilityAPITests(unittest.IsolatedAsyncioTestCase):
    status=await self.client.get(PREFIX+'/exports/requests/'+params['request_id']);self.assertEqual(status.json(),native)
    read=await self.client.get(PREFIX+'/exports/'+native['result']['id']+'?offset=0');self.assertEqual(read.json(),await self.call('bookmark_export_read',{'artifact_id':native['result']['id'],'offset':0}))
    self.assertLessEqual(len(base64.b64decode(read.json()['result']['content_base64'])),32768);worker.assert_not_called();native_worker.assert_not_called()
+ async def test_failed_http_restore_is_read_back_and_recovers_exact_request(self):
+  from bookmarks.errors import StorageError
+  exported=(await self.call('bookmark_export_create',{'request_id':str(uuid4())}))['result']
+  raw=base64.b64decode((await self.call('bookmark_export_read',{'artifact_id':exported['id']}))['result']['content_base64'])
+  u=(await self.client.post(PREFIX+'/backups/uploads',json={'size':len(raw),'digest':hashlib.sha256(raw).hexdigest(),'request_id':str(uuid4())})).json()['result']
+  await self.client.post(PREFIX+'/backups/uploads/'+u['id']+'/chunks',json={'offset':0,'content_base64':base64.b64encode(raw).decode()})
+  preview=(await self.client.post(PREFIX+'/backups/preview',json={'upload_id':u['id']})).json()['result']
+  params={'preview_id':preview['preview_id'],'input_digest':preview['input_digest'],'request_id':str(uuid4())}
+  with patch('bookmarks.portability.content.restore_content',side_effect=StorageError()):
+   self.assertEqual((await self.client.post(PREFIX+'/backups/restore',json=params)).status_code,503)
+  failed=(await self.client.get(PREFIX+'/backups/requests/'+params['request_id'])).json()['result'];self.assertEqual(failed['state'],'failed')
+  recovered=(await self.client.post(PREFIX+'/backups/restore',json=params)).json()['result'];self.assertEqual(recovered['state'],'succeeded');self.assertEqual(recovered['id'],failed['id'])
+  self.assertEqual((await self.client.get(PREFIX+'/backups/requests/'+params['request_id'])).json()['result'],recovered)
  async def test_upload_strict_types_offsets_and_restore_empty_bundle(self):
   exported=(await self.call('bookmark_export_create',{'format':'bundle','request_id':str(uuid4())}))['result'];raw=base64.b64decode((await self.call('bookmark_export_read',{'artifact_id':exported['id']}))['result']['content_base64'])
   params={'size':len(raw),'digest':hashlib.sha256(raw).hexdigest(),'request_id':str(uuid4())}
