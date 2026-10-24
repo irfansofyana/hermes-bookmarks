@@ -37,6 +37,13 @@ def insert_job(c,item,snapshot,request_id=None):
     return job_id,generation
 
 
+def has_active_job(c,item):
+    # Admission and claims agree on pointer/generation ownership. Inactive
+    # migrated history stays intact but can neither execute nor block a retry.
+    return c.execute("SELECT 1 FROM jobs WHERE item_id=? AND id=? AND generation=? AND state IN ('pending','running')",
+        (item['id'],item['enrichment_job_id'],item['enrichment_generation'])).fetchone() is not None
+
+
 def admit_automatic(c,item_id,settings_snapshot=None):
     item=load(c,item_id)
     if item['deleted_at'] is not None: return None
@@ -47,7 +54,7 @@ def admit_automatic(c,item_id,settings_snapshot=None):
     if options['automatic_summary'] and item['summary_source'] not in {'manual','legacy'}:fields.append('summary')
     if options['automatic_tags']:fields.append('tags')
     if not fields:return None
-    if c.execute('SELECT 1 FROM jobs WHERE item_id=? AND state IN (\'pending\',\'running\')',(item_id,)).fetchone():return None
+    if has_active_job(c,item):return None
     # Import snapshots are captured at start, while per-item ownership is captured now.
     snap={**snap,'version':2,'fields':fields,'primary_asset_id':item['primary_asset_id'],
           'summary_revision':item['summary_revision']}
@@ -71,7 +78,7 @@ class EnrichmentRequests:
                 return {'receipt':receipt,'job':public_job(c,receipt['job_id'])}
             item=load(c,item_id,expected_revision)
             if item['deleted_at'] is not None:raise ConflictError(item['revision'])
-            if c.execute("SELECT 1 FROM jobs WHERE item_id=? AND state IN ('pending','running')",(item_id,)).fetchone():raise ConflictError(item['revision'])
+            if has_active_job(c,item):raise ConflictError(item['revision'])
             snap=snapshot_settings(c)
             if item['kind']=='image' and not snap['options']['image_analysis']:raise ValidationError()
             snap={**snap,'fields':fields,'primary_asset_id':item['primary_asset_id'],'summary_revision':item['summary_revision']}

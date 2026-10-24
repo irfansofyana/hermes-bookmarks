@@ -33,6 +33,26 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual(legacy['summary_revision'], 0)
         self.assertEqual(service.settings_get()['settings']['model'], 'old-model')
 
+    def test_inactive_migrated_pending_job_does_not_block_explicit_reprocessing(self):
+        from uuid import uuid4
+        from bookmarks.jobs import JobQueue
+        old=next(row for row in self.before if row['state']=='pending')
+        # Reproduce the old-writer pointer/generation mismatch before migration.
+        with closing(sqlite3.connect(self.db)) as c:
+            c.execute('UPDATE items SET enrichment_job_id=NULL,enrichment_generation=enrichment_generation+1 WHERE id=?',(old['item_id'],));c.commit()
+        service=BookmarkService(self.root);queue=JobQueue(self.root)
+        self.assertIsNone(queue.claim('synthetic-worker',now=100))
+        item=service.get(old['item_id'])
+        accepted=service.enrich(item['id'],item['revision'],str(uuid4()),['tags'])
+        self.assertNotEqual(accepted['job']['id'],old['id'])
+        self.assertGreater(accepted['job']['generation'],old['generation'])
+        claimed=queue.claim('synthetic-worker',now=101);assert claimed is not None
+        self.assertEqual(claimed['id'],accepted['job']['id'])
+        # Preserve original history rather than reviving or deleting old work.
+        self.assertEqual(service.enrichment_get(old['id'])['state'],'pending')
+        from bookmarks.errors import ConflictError
+        with self.assertRaises(ConflictError):service.enrich(item['id'],item['revision'],str(uuid4()),['tags'])
+
     def test_two_independent_migrators_preserve_schema_and_content(self):
         with ThreadPoolExecutor(max_workers=2) as pool:
             services = list(pool.map(lambda _: BookmarkService(self.root), range(2)))
