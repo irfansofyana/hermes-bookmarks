@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-24T21:20:24.732151+07:00",
+  "initial_code_gates_at": "2026-10-24T21:20:24.732151+07:00",
   "code_head": "c599e1e0ae7ee55c36dbe1197ee7697654c962db",
   "python": [
     {
@@ -19,8 +19,8 @@
   ],
   "node": {
     "version": "24.18.0",
-    "tests": 316,
-    "pass": 316,
+    "tests": 318,
+    "pass": 318,
     "fail": 0,
     "cancelled": 0,
     "skipped": 0
@@ -46,5 +46,11 @@
   "author_fix_head": "c599e1e0ae7ee55c36dbe1197ee7697654c962db",
   "independent_reapproval": false,
   "provider_success_verified": false,
+  "test_harness_followup": {
+    "production_bundles_unchanged": true,
+    "prior_publish_run": {"tests": 316, "pass": 315, "fail": 1},
+    "failed_test": "desktop: lost chunk acknowledgement resumes at server offset without replaying the chunk",
+    "reproduction": "Both emitted clients delayed file-read100ms RED; bounded monotonic readiness deadline GREEN,52 Data tests and318 whole Node tests pass."
+  },
   "connected_electron_verified": false
 }

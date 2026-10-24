@@ -27,7 +27,16 @@ for(const target of ['desktop','dashboard'])test(target+': ready export exposes 
 const preview={preview_id:'preview-fixture',input_digest:digest(data),counts:{items:1,assets:0},format_version:1,empty_target:true,limitations:['No jobs or credentials restored.']};
 async function open(app,helpers){await helpers.click(helpers.button(app,'Data'),app);}
 async function settle(){for(let n=0;n<4;n++)await React.act(async()=>{await new Promise(resolve=>setImmediate(resolve));});}
-async function until(predicate){for(let n=0;n<50&&!predicate();n++)await settle();assert.ok(predicate(),'Expected asynchronous operation to settle');}
+async function until(predicate){const deadline=performance.now()+5000;while(!predicate()&&performance.now()<deadline){await settle();if(!predicate())await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,5));});}assert.ok(predicate(),'Expected asynchronous operation to settle within the readiness deadline');}
+for(const target of ['desktop','dashboard'])test(target+': backup file read may finish after many event-loop turns',async()=>{
+ const helpers=fixture();let readCompleted=false;const app=await helpers.mount(target,{overrideApi:(route)=>{
+  if(route==='/backups/uploads')return ok({id:'upload-delayed',size:data.length,digest:digest(data),offset:0});
+  if(route.endsWith('/chunks'))return ok({id:'upload-delayed',size:data.length,digest:digest(data),offset:data.length});
+  if(route==='/backups/preview')return ok(preview);
+ }});
+ try{await open(app,helpers);await choose(app,data,{arrayBuffer:()=>new Promise(resolve=>setTimeout(()=>{readCompleted=true;resolve(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));},100))});await helpers.click(helpers.button(app,'Upload and preview backup'),app);await until(()=>readCompleted&&!!helpers.button(app,'Restore backup'));assert.equal(helpers.button(app,'Restore backup').disabled,true);assert.equal(app.apiCalls.filter(c=>c.route==='/backups/uploads').length,1);
+ }finally{await app.close();}
+});
 for(const target of ['desktop','dashboard'])test(target+': discarding an unrelated file does not release a pending export admission',async()=>{
  const helpers=fixture();let release,requestId;const app=await helpers.mount(target,{overrideApi:(route,init)=>{if(route==='/exports'){requestId=init.body.request_id;return new Promise(resolve=>release=resolve);}}});
  try{await open(app,helpers);await choose(app);await helpers.click(helpers.button(app,'Generate export'),app);await helpers.click(helpers.button(app,'Close data'),app);await helpers.click(helpers.button(app,'Discard file and close'),app);await open(app,helpers);assert.equal(helpers.button(app,'Check export request').disabled,true);assert.equal(helpers.button(app,'Generate export').disabled,true);await React.act(async()=>release(ok(artifact())));assert.match(app.element.querySelector('.hb-dialog-data').textContent,new RegExp(requestId));assert.equal(helpers.button(app,'Download export').disabled,false);
