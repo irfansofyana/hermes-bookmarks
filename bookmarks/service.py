@@ -116,6 +116,14 @@ class BookmarkService:
         from .portability.store import PortabilityStore
         return PortabilityStore(self._storage).backup_restore_get(request_id)
 
+    def settings_get(self):
+        from .settings import SettingsStore
+        return SettingsStore(self._storage).get()
+
+    def settings_update(self, expected_revision, changes):
+        from .settings import SettingsStore
+        return SettingsStore(self._storage).update(expected_revision, changes)
+
     def identity(self):
         with self._storage._transaction() as connection:
             row = connection.execute("SELECT value FROM library_config WHERE key='library_id'").fetchone()

@@ -6,6 +6,7 @@ from .library_schema import upgrade_library
 from .imports.schema import upgrade_imports
 from .portability.schema import upgrade_content
 from .portability.operations_schema import upgrade_operations
+from .enrichment_schema import upgrade_enrichment
 
 
 MIGRATIONS = (
@@ -77,6 +78,7 @@ MIGRATIONS = (
     (upgrade_imports,),
     (upgrade_content,),
     (upgrade_operations,),
+    (upgrade_enrichment,),
 )
 
 
