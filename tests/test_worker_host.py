@@ -32,6 +32,17 @@ class WorkerHostTests(unittest.TestCase):
             ctx=self.context(d,'owner')
             self.assertEqual(start_enrichment(ctx),'host_loop_unavailable')
             self.assertEqual(self.calls,[])
+    def test_persisted_model_edit_survives_stale_owner_bootstrap(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx=self.context(d,'owner')
+            self.assertEqual(start_enrichment(ctx),'host_loop_unavailable')
+            from bookmarks.service import BookmarkService
+            service=BookmarkService(Path(d));cfg=service.settings_get()
+            service.settings_update(cfg['revision'],{'model':'new-library-model','image_analysis':True})
+            self.assertEqual(start_enrichment(ctx),'host_loop_unavailable')
+            self.assertEqual(service.settings_get()['settings']['model'],'new-library-model')
+            self.assertTrue(service.settings_get()['settings']['image_analysis'])
+
     def test_nonowner_profile_cannot_change_execution_identity(self):
         with tempfile.TemporaryDirectory() as d:
             ctx=self.context(d,'other')

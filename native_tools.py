@@ -32,17 +32,23 @@ ATTACHMENTS={'type':'array','maxItems':10,'items':ASSET,'uniqueItems':True}
 REVISION={'type':'integer','minimum':1,'maximum':2**63-1}
 PAGING={'limit':{'type':'integer','minimum':1,'maximum':100},'offset':{'type':'integer','minimum':0,'maximum':2**63-1}}
 ITEM_CHANGES={'title':text(1000),'description':text(16384),'notes':text(65536),'collection_id':COLLECTION,
-    'favorite':{'type':'boolean'},'read_later':{'type':'boolean'},'add_tags':TAGS,'remove_tags':TAGS,'attachment_ids':ATTACHMENTS}
-CAPTURE={key:value for key,value in ITEM_CHANGES.items() if key not in {'add_tags','remove_tags'}}
+    'favorite':{'type':'boolean'},'read_later':{'type':'boolean'},'add_tags':TAGS,'remove_tags':TAGS,'attachment_ids':ATTACHMENTS,'summary':text(16000)}
+CAPTURE={key:value for key,value in ITEM_CHANGES.items() if key not in {'add_tags','remove_tags','summary'}}
 CAPTURE.update({'kind':{'type':'string','enum':['link','image']},'url':text(8192,nullable=True),
     'tags':TAGS,'primary_asset_id':text(32,nullable=True,pattern='^[a-f0-9]{32}$'),'operation_key':OPERATION})
+
+SETTINGS_CHANGES={'provider':text(300),'model':text(300),'automatic_tags':{'type':'boolean'},
+    'automatic_summary':{'type':'boolean'},'image_analysis':{'type':'boolean'},'summary_language':text(80),
+    'summary_length':{'type':'string','enum':['short','medium','long']},'preferred_tags':TAGS,
+    'guidance':text(2000),'retain_extracted_text':{'type':'boolean'},'paused':{'type':'boolean'}}
+GENERATED_FIELDS={'type':'array','maxItems':2,'uniqueItems':True,'items':{'type':'string','enum':['summary','tags']}}
 
 SPECS = {
     'bookmark_attachment_add': ('Store user-provided image bytes as an owned attachment; never reads arbitrary local paths or analyzes it with AI.',
         {'content_base64':text(((10*1024*1024+2)//3)*4),'mime_type':text(50)}, ['content_base64','mime_type']),
     'bookmark_attachment_get': ('Read owned attachment metadata by ID. Returned API reference still requires host authentication.',
         {'asset_id':ASSET}, ['asset_id']),
-    'bookmark_save': ('Save a link or owned image with metadata. Links queue configured enrichment; page text may be sent to the library model and incur charges. Standalone image analysis is not configured. Use an operation key to reconcile uncertain writes.',CAPTURE,[]),
+    'bookmark_save': ('Save a link or owned image with metadata. Eligible saves queue library-configured enrichment; page text or opted-in standalone images may be sent to the library model and incur host retries/charges. Use an operation key to reconcile uncertain writes.',CAPTURE,[]),
     'bookmark_delete': ('Move one item into recoverable trash at its expected revision. Does not delete files.',{'item_id':ID,'expected_revision':REVISION},['item_id','expected_revision']),
     'bookmark_restore': ('Restore one trashed item without triggering inference.',{'item_id':ID,'expected_revision':REVISION},['item_id','expected_revision']),
     'bookmark_get': ('Read full saved detail without fetching a page or calling a model.', {'item_id':ID},['item_id']),
@@ -83,6 +89,13 @@ SPECS = {
     'bookmark_backup_preview': ('Validate sealed backup and preview full restore into an empty library only. No item writes or inference.',{'upload_id':ASSET},['upload_id']),
     'bookmark_backup_restore': ('Explicitly restore a validated backup only into an empty library. Atomic commit cannot be undone by closing; no credentials or queued AI replay.',{'preview_id':ASSET,'input_digest':text(64,pattern='^[a-f0-9]{64}$'),'request_id':OPERATION},['preview_id','input_digest','request_id']),
     'bookmark_backup_restore_get': ('Read restore request receipt after uncertain acknowledgement; never starts or retries restoration.',{'request_id':OPERATION},['request_id']),
+    'bookmark_settings_get': ('Read nonsecret shared-library AI settings; never starts inference.',{},[]),
+    'bookmark_settings_update': ('Update future-job AI settings at an expected settings revision; cannot change owner/credentials. Provider data transfer and host retries may incur charges.',{'expected_revision':REVISION,'changes':object_rule(SETTINGS_CHANGES)},['expected_revision','changes']),
+    'bookmark_enrich': ('Deliberately generate selected fields for one reviewed saved item. Replaces requested generated fields, not personal notes/manual tags; image analysis requires library opt-in. May incur provider charges and host retries.',{'item_id':ID,'expected_revision':REVISION,'request_id':OPERATION,'fields':GENERATED_FIELDS},['item_id','expected_revision','request_id','fields']),
+    'bookmark_enrichment_request_get': ('Read exact enrichment receipt without replay or activation.',{'request_id':OPERATION},['request_id']),
+    'bookmark_enrichment_get': ('Read bounded enrichment status without worker activation or source-body/lease disclosure.',{'job_id':ID},['job_id']),
+    'bookmark_enrichment_cancel': ('Cancel application of a pending/running enrichment job. An admitted provider request may continue and incur charges.',{'job_id':ID},['job_id']),
+    'bookmark_source_clear': ('Explicitly remove retained extracted article text at expected item revision. Keeps notes/imported sources and does not call a model.',{'item_id':ID,'expected_revision':REVISION},['item_id','expected_revision']),
 }
 
 
@@ -141,6 +154,10 @@ def execute(name, params, service_factory=get_service):
                 payload['receipt']=saved['receipt']
             return payload
         operations={
+            'bookmark_settings_get':service.settings_get,'bookmark_settings_update':service.settings_update,
+            'bookmark_enrich':service.enrich,'bookmark_enrichment_request_get':service.enrichment_request_get,
+            'bookmark_enrichment_get':service.enrichment_get,'bookmark_enrichment_cancel':service.enrichment_cancel,
+            'bookmark_source_clear':service.source_clear,
             'bookmark_export_create':service.export_create,'bookmark_export_get':service.export_get,'bookmark_export_read':service.export_read,
             'bookmark_backup_upload_create':service.backup_upload_create,'bookmark_backup_upload_chunk':service.backup_upload_chunk,
             'bookmark_backup_preview':service.backup_preview,'bookmark_backup_restore':service.backup_restore,'bookmark_backup_restore_get':service.backup_restore_get,
@@ -179,17 +196,15 @@ def _dispatch_import(name, params):
 def register_tools(ctx):
     for name,(description,fields,required) in SPECS.items():
         async def handler(params,_name=name,**kwargs):
-            if _name=='bookmark_save': ensure_enrichment()
-            if _name in {'bookmark_import_start','bookmark_job_get','bookmark_job_cancel','bookmark_import_request_get'}:
-                ensure_imports()
-                result,enrich=await asyncio.to_thread(_dispatch_import,_name,params)
-                # Only this public async lane can activate the registered owner
-                # after synchronous startup deferred for lack of a host loop.
-                if enrich: ensure_enrichment()
-            elif _name.startswith(('bookmark_export_','bookmark_backup_')):
-                result=await _storage_call(dispatch,_name,params)
+            if _name=='bookmark_import_start':
+                result,enrich=await _storage_call(_dispatch_import,_name,params)
+                if result['ok']:
+                    ensure_imports()
+                    if enrich:ensure_enrichment()
             else:
-                result=await asyncio.to_thread(dispatch,_name,params)
+                result=await _storage_call(dispatch,_name,params)
+                if result['ok'] and _name in {'bookmark_save','bookmark_settings_update','bookmark_enrich'}:
+                    ensure_enrichment()
             return json.dumps(result,ensure_ascii=False)
         ctx.register_tool(name=name,toolset='hermes_bookmarks',
             schema={'name':name,'description':description,'parameters':{

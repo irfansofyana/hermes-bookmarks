@@ -8,16 +8,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-async def activate_worker(request: Request):
-    path=request.url.path.split('/hermes-bookmarks',1)[-1]
-    if path.startswith(('/exports','/backups')):return
-    bridge=sys.modules.get(BRIDGE_NAME)
-    if bridge is not None:
-        bridge.ensure_enrichment()
-        if request.url.path.split('/hermes-bookmarks',1)[-1].startswith('/imports'):bridge.ensure_imports()
-
-
-router = APIRouter(dependencies=[Depends(activate_worker)])
+router = APIRouter()  # Reads never activate workers; successful admission writes do.
 BRIDGE_NAME = 'hermes_bookmarks_runtime_bridge'
 
 
@@ -101,11 +92,55 @@ async def metadata_request(request, name, identity=None, *, max_bytes=128*1024):
     if not isinstance(body,dict) or (identity and set(identity)&set(body)):
         return invalid_request()
     params={**body,**(identity or {})}
-    if name.startswith(('bookmark_export_','bookmark_backup_')):
-        bridge=sys.modules.get(BRIDGE_NAME)
-        if bridge is not None:
-            return await bridge.portability_call(invoke,name,params)
-    return await run_in_threadpool(invoke,name,params)
+    bridge=sys.modules.get(BRIDGE_NAME)
+    response=await bridge.portability_call(invoke,name,params) if bridge is not None else await run_in_threadpool(invoke,name,params)
+    if bridge is not None and response.status_code==200:
+        if name in {'bookmark_save','bookmark_settings_update','bookmark_enrich'}:
+            bridge.ensure_enrichment()
+        elif name=='bookmark_import_start':
+            bridge.ensure_imports()
+            accepted=json.loads(response.body)['result']
+            def has_enrichment():
+                with bridge.get_service()._storage._transaction() as c:
+                    row=c.execute('SELECT settings IS NOT NULL AS enabled FROM import_jobs WHERE id=?',(accepted['id'],)).fetchone()
+                    return row is not None and bool(row['enabled'])
+            if await bridge.portability_call(has_enrichment):bridge.ensure_enrichment()
+    return response
+
+
+@router.get('/settings')
+def settings_get(request: Request):
+    return query_response(request,'bookmark_settings_get')
+
+
+@router.post('/settings')
+async def settings_update(request: Request):
+    return await metadata_request(request,'bookmark_settings_update')
+
+
+@router.post('/items/{item_id}/enrich')
+async def enrich(item_id: str, request: Request):
+    return await metadata_request(request,'bookmark_enrich',{'item_id':item_id})
+
+
+@router.get('/enrichment/requests/{request_id}')
+def enrichment_request_get(request_id: str, request: Request):
+    return query_response(request,'bookmark_enrichment_request_get',identity={'request_id':request_id})
+
+
+@router.get('/enrichment/jobs/{job_id}')
+def enrichment_get(job_id: str, request: Request):
+    return query_response(request,'bookmark_enrichment_get',identity={'job_id':job_id})
+
+
+@router.post('/enrichment/jobs/{job_id}/cancel')
+async def enrichment_cancel(job_id: str, request: Request):
+    return await metadata_request(request,'bookmark_enrichment_cancel',{'job_id':job_id})
+
+
+@router.post('/items/{item_id}/source/clear')
+async def source_clear(item_id: str, request: Request):
+    return await metadata_request(request,'bookmark_source_clear',{'item_id':item_id})
 
 
 @router.get('/library/identity')

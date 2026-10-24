@@ -35,4 +35,11 @@ provides_tools:
   - bookmark_backup_preview
   - bookmark_backup_restore
   - bookmark_backup_restore_get
+  - bookmark_settings_get
+  - bookmark_settings_update
+  - bookmark_enrich
+  - bookmark_enrichment_request_get
+  - bookmark_enrichment_get
+  - bookmark_enrichment_cancel
+  - bookmark_source_clear
 provides_hooks: []

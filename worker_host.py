@@ -7,13 +7,13 @@ if __package__:
     from .bookmarks.service import BookmarkService
     from .bookmarks.enrichment import run_worker
     from .bookmarks.extract import extract_text
-    from .bookmarks.errors import StorageError
+    from .bookmarks.errors import StorageError, ConflictError, ValidationError
 else:
     from bookmarks.jobs import JobQueue
     from bookmarks.service import BookmarkService
     from bookmarks.enrichment import run_worker
     from bookmarks.extract import extract_text
-    from bookmarks.errors import StorageError
+    from bookmarks.errors import StorageError, ConflictError, ValidationError
 
 
 def start_enrichment(ctx, *, on_task=None):
@@ -27,8 +27,13 @@ def start_enrichment(ctx, *, on_task=None):
     if getattr(ctx,'profile_name',None)!=route['owner_profile']: return 'not_owner'
     try:
         queue=JobQueue(Path(root))
-        queue.configure_route(route)
-    except ValueError: return 'route_conflict'
+        if __package__:
+            from .bookmarks.settings import SettingsStore
+        else:
+            from bookmarks.settings import SettingsStore
+        current=SettingsStore(queue.storage).seed_route(route)
+        if current['settings']['owner_profile']!=getattr(ctx,'profile_name',None):return 'not_owner'
+    except (ValueError,ConflictError,ValidationError):return 'route_conflict'
     except StorageError: return 'storage_unavailable'
     spawn=getattr(ctx,'spawn_task',None)
     if not callable(spawn): return 'supervisor_unavailable'

@@ -22,7 +22,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(native['provides_tools'], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
-            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get'])
+            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get', 'bookmark_settings_get', 'bookmark_settings_update', 'bookmark_enrich', 'bookmark_enrichment_request_get', 'bookmark_enrichment_get', 'bookmark_enrichment_cancel', 'bookmark_source_clear'])
         self.assertEqual(native['provides_hooks'], [])
         self.assertNotIn('requires_hermes', native)
         self.assertTrue((ROOT / 'dashboard' / dashboard['entry']).is_file())
@@ -48,7 +48,7 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([t['name'] for t in tools], ['bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
-            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get'])
+            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get', 'bookmark_settings_get', 'bookmark_settings_update', 'bookmark_enrich', 'bookmark_enrichment_request_get', 'bookmark_enrichment_get', 'bookmark_enrichment_cancel', 'bookmark_source_clear'])
         self.assertEqual([c['name'] for c in commands], ['bookmarks-status'])
         payload = json.loads(commands[0]['handler']('', unused_host_keyword=True))
         self.assertEqual(payload['stage'], 'foundation_preview')

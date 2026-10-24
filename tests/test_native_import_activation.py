@@ -140,7 +140,7 @@ class NativeImportActivationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(runtime.get_status()['enrichment_startups'][0]['result'],
                                  'host_loop_unavailable')
 
-    async def assert_cold_reentry_activates(self, name):
+    async def assert_cold_read_does_not_activate(self, name):
         params = await self.preview({'enrich': True})
         # Simulate an accepted Start whose acknowledgement/host generation was
         # lost. No handler-local preview cache can establish this job's opt-in.
@@ -149,28 +149,32 @@ class NativeImportActivationTests(unittest.IsolatedAsyncioTestCase):
         arguments = ({'request_id': params['request_id']}
                      if name == 'bookmark_import_request_get' else {'job_id': job['id']})
         await self.call(name, arguments)
+        self.assertEqual(self.tasks, [], 'Read-only lookup cannot resume paid processing')
+        resumed = await self.call('bookmark_import_start', params)
+        self.assertEqual(resumed['id'], job['id'])
         self.assertEqual([t.get_name() for t in self.tasks].count('bookmarks-enrichment'), 1)
         self.assertEqual(runtime.get_status()['enrichment_startups'][0]['result'], 'started')
 
-    async def test_cold_job_poll_activates_persisted_opt_in(self):
-        await self.assert_cold_reentry_activates('bookmark_job_get')
+    async def test_cold_job_poll_is_read_only_then_explicit_start_resumes(self):
+        await self.assert_cold_read_does_not_activate('bookmark_job_get')
 
-    async def test_cold_request_lookup_activates_persisted_opt_in(self):
-        await self.assert_cold_reentry_activates('bookmark_import_request_get')
+    async def test_cold_request_lookup_is_read_only_then_explicit_start_resumes(self):
+        await self.assert_cold_read_does_not_activate('bookmark_import_request_get')
 
-    async def test_cold_cancel_activates_persisted_opt_in_for_committed_rows(self):
+    async def test_cold_cancel_does_not_start_paid_processing_for_committed_rows(self):
         params = await self.preview({'enrich': True})
         service = runtime.get_service()
         job = await asyncio.to_thread(service.import_start, **params)
         # Commit the opted-in import before returning to the native async lane.
-        # Cancellation must still wake enrichment for already committed rows.
+        # Cancellation preserves admitted rows but must not start paid processing.
         queue_module = importlib.import_module(PACKAGE + '.bookmarks.imports.runner')
         storage_module = importlib.import_module(PACKAGE + '.bookmarks.storage')
         queue = queue_module.ImportQueue(storage_module.Storage(Path(self.temp.name)))
         claim = await asyncio.to_thread(queue.claim, 'prior-host')
         self.assertTrue(await asyncio.to_thread(queue.step, claim))
         await self.call('bookmark_job_cancel', {'job_id': job['id']})
-        self.assertEqual([t.get_name() for t in self.tasks].count('bookmarks-enrichment'), 1)
+        self.assertEqual(self.tasks, [])
+        self.assertEqual(self.completions, [])
 
     async def test_rejected_import_requests_do_not_activate_inference(self):
         params = await self.preview({'enrich': True})
@@ -183,7 +187,7 @@ class NativeImportActivationTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(name=name):
                 result = json.loads(await self.tools[name]['handler'](arguments))
                 self.assertFalse(result['ok'], result)
-                self.assertEqual([t.get_name() for t in self.tasks], ['bookmarks-imports'])
+                self.assertEqual(self.tasks, [])
                 self.assertEqual(self.completions, [])
                 self.assertEqual(runtime.get_status()['enrichment_startups'][0]['result'],
                                  'host_loop_unavailable')

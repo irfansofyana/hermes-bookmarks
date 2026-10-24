@@ -136,7 +136,7 @@ def ensure_enrichment():
             if profile != getattr(ctx,'profile_name','unknown'): continue
             result=_startups.get(token,{}).get('result')
             if result!='host_loop_unavailable':
-                if result not in {'storage_unavailable','worker_failed','worker_stopped'}: continue
+                if result not in {'storage_unavailable','worker_failed','worker_stopped','configuration_required','route_conflict'}: continue
                 if monotonic() < _retry_after.get(token,0): continue
             start_registered_enrichment(token)
 
@@ -168,8 +168,7 @@ def get_service():
         if bridge is None or len(roots) != 1:
             raise ConfigurationError()
         root = next(iter(roots))
-    queue_module = importlib.import_module('.bookmarks.jobs', __package__) if __package__ else importlib.import_module('bookmarks.jobs')
-    return BookmarkService(root, enrichment_settings=queue_module.JobQueue(root).route())
+    return BookmarkService(root, enrichment_settings={})
 
 
 def dispatch(name, params):

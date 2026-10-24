@@ -71,7 +71,9 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json(), saved)
         found = await self.call('bookmark_search', {'query': 'Shared'})
         self.assertEqual(found['result']['total'], 1)
-        self.assertEqual(item['enrichment_status'], 'pending')
+        self.assertEqual(item['enrichment_status'], 'failed')
+        job = await self.call('bookmark_enrichment_get', {'job_id':item['enrichment_job_id']})
+        self.assertEqual(job['result']['error_code'],'configuration_required')
         self.assertTrue(item['enrichment_job_id'])
 
     async def test_http_save_native_get_and_duplicate(self):
@@ -131,7 +133,7 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(self.tools), {'bookmark_attachment_add', 'bookmark_attachment_get', 'bookmark_save', 'bookmark_delete', 'bookmark_restore', 'bookmark_get', 'bookmark_search',
             'bookmark_update', 'bookmark_note_update', 'bookmark_capture_status', 'bookmark_collection_list',
             'bookmark_collection_create', 'bookmark_collection_update', 'bookmark_collection_delete', 'bookmark_tag_list',
-            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get'})
+            'bookmark_library_identity', 'bookmark_import_preview', 'bookmark_import_start', 'bookmark_import_request_get', 'bookmark_job_get', 'bookmark_job_cancel', 'bookmark_counts', 'bookmark_export_create', 'bookmark_export_get', 'bookmark_export_read', 'bookmark_backup_upload_create', 'bookmark_backup_upload_chunk', 'bookmark_backup_preview', 'bookmark_backup_restore', 'bookmark_backup_restore_get', 'bookmark_settings_get', 'bookmark_settings_update', 'bookmark_enrich', 'bookmark_enrichment_request_get', 'bookmark_enrichment_get', 'bookmark_enrichment_cancel', 'bookmark_source_clear'})
         for tool in self.tools.values():
             self.assertIs(tool['schema']['parameters']['additionalProperties'], False)
         self.assertEqual(self.tools['bookmark_search']['schema']['parameters']['properties']['limit']['maximum'], 100)
