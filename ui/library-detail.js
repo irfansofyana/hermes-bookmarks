@@ -1,22 +1,29 @@
 function createLibraryDetail(React,adapter,components){
- const {createElement:h,useState,useEffect}=React,Button=components.Button||'button',Dialog=createLibraryDialog(React,components),AssetImage=createBookmarkAssetImage(React,adapter);
- return function LibraryDetail({ctx,scope,libraryId,itemId,onEdit,onAsk,onClose}){
-  const [item,setItem]=useState(null),[error,setError]=useState('');
-  useEffect(()=>{let live=true;bookmarkRequest(adapter,ctx,scope,'/items/'+encodeURIComponent(itemId)).then(payload=>{if(live)setItem(payload.result);}).catch(error=>{if(live)setError(error.message);});return()=>{live=false;};},[ctx,scope,libraryId,itemId]);
+ const {createElement:h,useState,useEffect,useRef}=React,Button=components.Button||'button',Dialog=createLibraryDialog(React,components),AssetImage=createBookmarkAssetImage(React,adapter),Enrichment=createLibraryEnrichment(React,adapter,components);
+ return function LibraryDetail({ctx,scope,libraryId,itemId,onEdit,onAsk,onClose,onChanged}){
+  const [item,setItem]=useState(null),[error,setError]=useState(''),owner=useRef(null),generation=useRef(0);
+  async function refresh(){const lease=owner.current;if(!lease?.active)return;const ticket=++generation.current;
+   try{const payload=await bookmarkRequest(adapter,ctx,scope,'/items/'+encodeURIComponent(itemId));if(lease.active&&ticket===generation.current){setItem(payload.result);setError('');}}
+   catch(error){if(lease.active&&ticket===generation.current)setError(error.message);}
+  }
+  useEffect(()=>{const lease={active:true};owner.current=lease;refresh();return()=>{lease.active=false;generation.current++;};},[ctx,scope,libraryId,itemId]);
   let original=null;try{const url=new URL(item?.url);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)original=url.href;}catch{}
-  const processing=({pending:'Enrichment queued',running:'Enriching…',succeeded:'Summary saved',failed:'Enrichment failed',cancelled:'Enrichment cancelled'})[item?.enrichment_status]||(item?.kind==='image'?'Image saved · visual AI unavailable':'No enrichment started');
+  const processing=({pending:'Enrichment queued',running:'Enriching…',succeeded:'Generated fields applied',failed:'Enrichment failed',cancelled:'Enrichment cancelled'})[item?.enrichment_status]||'No enrichment started';
+  const summaryKind=item?.summary_source==='manual'?'Manual summary · protected from delayed AI':item?.summary_source==='generated'?'Generated summary':item?.summary_source==='legacy'?'Legacy summary · provenance unknown':'Saved summary · provenance unknown';
   return h(Dialog,{className:'hb-dialog-detail',title:item?bookmarkItemName(item):'Bookmark details',description:'Saved content in your shared library.',onCloseRequest:onClose},
    error?h('p',{role:'alert'},error):!item?h('p',{role:'status'},'Loading saved item…'):h('div',{className:'hb-item-detail'},
     h('header',{className:'hb-detail-overview'},item.description&&h('p',{className:'hb-detail-description'},item.description),h('div',{className:'hb-tags'},(item.tag_details||[]).map(tag=>h('span',{key:tag.name,className:'hb-tag',title:tag.source==='generated'?'AI-generated tag':'Manual tag'},tag.name,tag.source==='generated'?' · AI':'')))),
     h('section',{className:'hb-detail-section','aria-label':'Personal notes'},h('h3',null,'Personal notes'),item.notes?bookmarkMarkdown(React,item.notes):h('p',{className:'hb-muted'},'No personal notes yet.')),
-    h('section',{className:'hb-detail-section','aria-label':'Saved AI summary'},h('div',{className:'hb-detail-section-heading'},h('h3',null,'Saved AI summary'),h('span',{className:'hb-detail-processing'},processing)),item.summary?bookmarkMarkdown(React,item.summary):h('p',{className:'hb-muted'},item.kind==='image'?'Visual analysis is not available in this preview.':'No saved summary yet.')),
+    h('section',{className:'hb-detail-section','aria-label':'Saved AI summary','data-summary-source':item.summary_source||'unknown'},h('div',{className:'hb-detail-section-heading'},h('h3',null,item.summary_source==='manual'?'Manual summary (protected)':'Saved AI summary'),h('span',{className:'hb-detail-processing'},processing)),h('p',{className:'hb-summary-ownership'},summaryKind),item.summary?bookmarkMarkdown(React,item.summary):h('p',{className:'hb-muted'},'No saved summary yet.')),
     h('section',{className:'hb-detail-section','aria-label':'Source & import provenance'},h('h3',null,'Source & import provenance'),
      original?h('div',{className:'hb-original-source'},h('p',{className:'hb-source-address'},original),h('a',{href:original,target:'_blank',rel:'noopener noreferrer'},'Open original')):h('p',{className:'hb-muted'},item.kind==='image'?'Uploaded image · stored in this library.':'Source URL unavailable.'),
+     item.extracted_text&&h('details',{className:'hb-source-text-disclosure'},h('summary',null,'Retained extracted text'),h('p',{className:'hb-section-hint'},'Plugin-retained article body, not personal notes or imported source text. Clear it separately below.'),h('pre',{className:'hb-source-text'},item.extracted_text)),
      (item.imported_sources||[]).map((source,index)=>h('details',{key:index,className:'hb-import-source'},h('summary',null,source.source||'Imported source',' · ',source.locator||'Import '+(index+1)),
       h('dl',{className:'hb-provenance'},source.source&&h(React.Fragment,null,h('dt',null,'Source'),h('dd',null,source.source)),source.locator&&h(React.Fragment,null,h('dt',null,'Location'),h('dd',null,source.locator)),source.source_id&&h(React.Fragment,null,h('dt',null,'Source ID'),h('dd',null,source.source_id))),
       source.imported_summary&&h('div',{className:'hb-imported-summary'},h('h4',null,'Imported summary'),h('p',{className:'hb-section-hint'},'Retained from the import, not generated by Hermes.'),bookmarkMarkdown(React,source.imported_summary)),
       source.source_text&&h('details',{className:'hb-source-text-disclosure'},h('summary',null,'Retained source text'),h('pre',{className:'hb-source-text'},source.source_text))))),
-    item.attachments?.length>0&&h('section',{className:'hb-detail-section','aria-label':'Images'},h('h3',null,'Images'),h('div',{className:'hb-attachments'},item.attachments.map(asset=>h(AssetImage,{key:asset.asset_id,ctx,scope,assetId:asset.asset_id,alt:asset.role==='primary'?'Primary image':'Attached image'}))))),
+    item.attachments?.length>0&&h('section',{className:'hb-detail-section','aria-label':'Images'},h('h3',null,'Images'),h('div',{className:'hb-attachments'},item.attachments.map(asset=>h(AssetImage,{key:asset.asset_id,ctx,scope,assetId:asset.asset_id,alt:asset.role==='primary'?'Primary image':'Attached image'})))),
+    h(Enrichment,{ctx,scope,libraryId,item,onChanged,onReload:refresh,onItemChanged:record=>{if(owner.current?.active)setItem(previous=>!previous||record.revision>=previous.revision?record:previous);}})),
    h('div',{className:'hb-detail-footer hb-form-actions'},item&&!error&&!item.deleted_at&&h(Button,{type:'button',onClick:()=>onEdit(item)},'Edit'),item&&!error&&h(Button,{type:'button',onClick:()=>{onAsk?.(item);onClose();}},'Ask Hermes'),h(Button,{type:'button',onClick:onClose},'Close details')));
  };
 }
