@@ -1,0 +1,68 @@
+{
+  "actual_host": true,
+  "rows": [
+    {
+      "file": "bookmarks-chat-dashboard-dark-1440.png",
+      "actual_host": true,
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "workspace_overflow": false,
+      "chat_visible": true,
+      "composer_visible": true,
+      "color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "file": "bookmarks-chat-dashboard-dark-390.png",
+      "actual_host": true,
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "workspace_overflow": false,
+      "chat_visible": true,
+      "composer_visible": true,
+      "color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "file": "bookmarks-chat-dashboard-light-1440.png",
+      "actual_host": true,
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "workspace_overflow": false,
+      "chat_visible": true,
+      "composer_visible": true,
+      "color": "color(srgb 0 0.32549 0.992157)"
+    },
+    {
+      "file": "bookmarks-chat-dashboard-light-390.png",
+      "actual_host": true,
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "workspace_overflow": false,
+      "chat_visible": true,
+      "composer_visible": true,
+      "color": "color(srgb 0 0.32549 0.992157)"
+    }
+  ],
+  "page_errors": [],
+  "rpc_methods": [
+    "client.capabilities",
+    "model.options",
+    "session.resume",
+    "session.create",
+    "prompt.submit",
+    "session.activate",
+    "session.history"
+  ],
+  "prepared_without_submission": true,
+  "theme_preserved_drafts": true,
+  "mobile_preserved_drafts": true,
+  "turn": {
+    "initialStatus": "Thinking\nStop",
+    "status": "Ready",
+    "error": "Hermes is not connected to any AI provider yet. Run `hermes model` to pick one, type `/login` in chat, or add a key with `hermes auth add <provider>`. (Advanced: put an API key such as OPENROUTER_API_KEY in ~/.hermes/.env.)\n\nReconnect conversation",
+    "response": []
+  }
+}

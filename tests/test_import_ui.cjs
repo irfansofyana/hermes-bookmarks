@@ -1,0 +1,63 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {mount,click,typeField,button,flush}=require('./helpers/emitted-client.cjs');
+for(const target of ['desktop','dashboard']){
+ test(target+': cancelling from later result page adopts server response pagination',async()=>{
+  const app=await mount(target,{overrideApi:async(route)=>{
+   if(route.startsWith('/imports/running')){const offset=route.endsWith('/cancel')?0:Number(new URL(route,'https://fixture.invalid').searchParams.get('offset')||0);return {ok:true,result:{id:'running',state:route.endsWith('/cancel')?'cancelled':'running',total:100,processed:51,remaining:49,imported:51,skipped:0,failed:0,offset,limit:50,rows:[{index:offset,outcome:'imported'}]}};}
+  }});
+  try{await click(button(app,'Import'),app);await typeField(app,'Import job ID','running');await click(button(app,'Open import job'),app);await click(button(app,'Next import results'),app);assert.match(app.element.textContent,/Row 51: imported/);
+   await click(button(app,'Cancel remaining import'),app);assert.match(app.element.textContent,/Row 1: imported/);assert.equal(button(app,'Previous import results').disabled,true);assert.equal(button(app,'Next import results').disabled,false);
+  }finally{await app.close();}
+ });
+ test(target+': saved import job can be inspected after reopening and all result pages are reachable',async()=>{
+  const reads=[];const app=await mount(target,{overrideApi:async(route)=>{
+   if(route.startsWith('/imports/saved-job')){reads.push(route);const offset=Number(new URL(route,'https://fixture.invalid').searchParams.get('offset')||0);return {ok:true,result:{id:'saved-job',state:'succeeded',total:51,processed:51,remaining:0,imported:51,skipped:0,failed:0,limit:50,offset,rows:[{index:offset,outcome:'imported',warnings:[]}]}};}
+  }});
+  try{await click(button(app,'Import'),app);await typeField(app,'Import job ID','saved-job');await click(button(app,'Open import job'),app);
+   assert.match(app.element.textContent,/Row 1: imported/);await click(button(app,'Next import results'),app);assert.match(app.element.textContent,/Row 51: imported/);
+   assert.match(reads.at(-1),/offset=50/);await click(button(app,'Previous import results'),app);assert.match(app.element.textContent,/Row 1: imported/);
+  }finally{await app.close();}
+ });
+ test(target+': discarded file read cannot populate a replacement source draft',async()=>{
+  let finish;const app=await mount(target);
+  try{await click(button(app,'Import'),app);const input=app.field('Import file');Object.defineProperty(input,'files',{value:[{name:'fixture.html',size:20,text:()=>new Promise(resolve=>{finish=resolve;})}]});
+   await require('react').act(async()=>input.dispatchEvent(new app.dom.window.Event('change',{bubbles:true})));
+   await click(button(app,'Close import'),app);await click(button(app,'Discard import'),app);await click(button(app,'Import'),app);
+   await typeField(app,'Import source','new draft');await require('react').act(async()=>finish('old HTML source'));
+   assert.equal(app.field('Import source').value,'new draft');assert.equal(app.field('Import format').value,'records');
+  }finally{await app.close();}
+ });
+
+ test(target+': imports require preview and explicit Start, default no AI, retained dirty source',async()=>{
+  let started=0;const preview={preview_id:'preview',input_digest:'a'.repeat(64),total:2,valid:1,invalid:1,existing:0,duplicate_in_batch:0,rows:[{index:0,status:'valid',warnings:['unsupported_field:extra']},{index:1,status:'invalid',warnings:[],error_code:'invalid_url'}]};
+  const job={id:'job',kind:'import',state:'succeeded',total:2,processed:2,remaining:0,imported:1,skipped:0,failed:1,rows:[]};
+  const app=await mount(target,{overrideApi:async(route,init)=>{
+   if(route==='/imports/preview'){assert.equal(init.body.options.enrich,false);assert.equal(init.body.records[0].notes,'Keep');return {ok:true,result:preview};}
+   if(route==='/imports/start'){started++;assert.equal(init.body.preview_id,'preview');assert.equal(init.body.input_digest,'a'.repeat(64));assert.equal(init.body.records,undefined);return {ok:true,result:job};}
+  }});
+  try{
+   await click(button(app,'Import'),app);assert.equal(button(app,'Start import'),undefined);
+   await typeField(app,'Import source','[{"url":"https://example.org","notes":"Keep"}]');
+   await click(button(app,'Close import'),app);await click(button(app,'Keep editing'),app);
+   assert.match(app.field('Import source').value,/Keep/);
+   await click(button(app,'Preview import'),app);assert.equal(started,0);
+   assert.match(app.element.textContent,/unsupported_field:extra/);assert.match(app.element.textContent,/Invalid: 1/);
+   await click(button(app,'Start import'),app);assert.equal(started,1);
+   assert.match(app.element.textContent,/Imported: 1/);assert.match(app.element.textContent,/Failed: 1/);
+   assert.equal(app.calls.filter(c=>c.method==='prompt.submit').length,0);
+  }finally{await app.close();}
+ });
+ test(target+': lost Start is reconciled read-only with the same request identity',async()=>{
+  let writes=0,key;const job={id:'job',state:'cancelled',total:1,processed:0,remaining:1,imported:0,skipped:0,failed:0,rows:[]};
+  const app=await mount(target,{overrideApi:async(route,init)=>{
+   if(route==='/imports/preview')return {ok:true,result:{preview_id:'p',input_digest:'a'.repeat(64),total:1,valid:1,invalid:0,existing:0,duplicate_in_batch:0,rows:[]}};
+   if(route==='/imports/start'){writes++;key=init.body.request_id;throw Error('Lost acknowledgement');}
+   if(route.startsWith('/imports/requests/')){assert.equal(route.split('/').at(-1),key);return {ok:true,result:job};}
+  }});
+  try{await click(button(app,'Import'),app);await typeField(app,'Import source','[{"url":"https://example.org"}]');await click(button(app,'Preview import'),app);await click(button(app,'Start import'),app);
+   assert.match(app.element.textContent,/uncertain/i);assert.equal(button(app,'Start import')?.disabled,true);
+   await click(button(app,'Check accepted import'),app);assert.equal(writes,1);assert.match(app.element.textContent,/Remaining: 1/);
+  }finally{await app.close();}
+ });
+}

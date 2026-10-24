@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "write_lock_seconds": 7.027,
+  "sqlite_busy_timeout_seconds": 5,
+  "startup_before": [
+    {
+      "profile": "default",
+      "result": "started"
+    }
+  ],
+  "startup_while_locked": [
+    {
+      "profile": "default",
+      "result": "started"
+    }
+  ],
+  "startup_after": [
+    {
+      "profile": "default",
+      "result": "started"
+    }
+  ],
+  "job_state": "failed",
+  "job_error": "configuration_required",
+  "job_attempts": 1,
+  "no_api_reactivation_between_unlock_and_job_completion": true
+}

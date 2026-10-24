@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "actual_restart_readback": true,
+  "settings_receipts_and_summary_match": true,
+  "provider_calls": false
+}

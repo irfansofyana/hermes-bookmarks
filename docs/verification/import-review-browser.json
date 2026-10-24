@@ -1,0 +1,62 @@
+{
+  "ok": true,
+  "actual_dashboard": true,
+  "provider_calls": false,
+  "rows": [
+    {
+      "check": "import_preview_visual_focus",
+      "theme": "dark",
+      "viewport": 1440,
+      "file": "bookmarks-import-dark-1440.png",
+      "width": 418,
+      "visible_left": 510,
+      "visible_right": 930,
+      "overflow": false,
+      "document_overflow": false
+    },
+    {
+      "check": "import_preview_visual_focus",
+      "theme": "dark",
+      "viewport": 390,
+      "file": "bookmarks-import-dark-390.png",
+      "width": 376,
+      "visible_left": 6,
+      "visible_right": 384,
+      "overflow": false,
+      "document_overflow": false
+    },
+    {
+      "check": "import_preview_visual_focus",
+      "theme": "light",
+      "viewport": 1440,
+      "file": "bookmarks-import-light-1440.png",
+      "width": 418,
+      "visible_left": 510,
+      "visible_right": 930,
+      "overflow": false,
+      "document_overflow": false
+    },
+    {
+      "check": "import_preview_visual_focus",
+      "theme": "light",
+      "viewport": 390,
+      "file": "bookmarks-import-light-390.png",
+      "width": 376,
+      "visible_left": 6,
+      "visible_right": 384,
+      "overflow": false,
+      "document_overflow": false
+    },
+    {
+      "check": "trashed_duplicate_retains_add_draft_without_overwrite_or_implicit_restore",
+      "ok": true
+    },
+    {
+      "check": "actual_preview_start_poll_notes_provenance_trash_undo_and_reload_job_inspection",
+      "ok": true,
+      "job_id": "63e04a05bde34d908d0c02ab9be0f2b8",
+      "item_id": "f075c5c6-c005-4573-b2f4-1de21b07585b"
+    }
+  ],
+  "page_errors": []
+}

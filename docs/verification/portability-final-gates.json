@@ -1,0 +1,19 @@
+{
+  "backend_fix": "b3fef77",
+  "python": {
+    "311": {
+      "passed": 242,
+      "seconds": 49.777
+    },
+    "314": {
+      "passed": 242,
+      "seconds": 50.732
+    }
+  },
+  "node": {
+    "passed": 217,
+    "failed": 0,
+    "tests_use_actual_bundles": true
+  },
+  "no_model_inference": true
+}

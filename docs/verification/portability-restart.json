@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "actual_authenticated_hosts": true,
+  "mode": "restart_readback",
+  "compared_items": 4,
+  "compared_owned_assets": 1,
+  "full_item_projections_equal": true,
+  "exact_asset_bytes_and_mime": true,
+  "artifact_digest_persists": true,
+  "restore_receipt_persists": true,
+  "target_identity_preserved": true,
+  "provider_calls": false
+}

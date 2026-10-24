@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "actual_dashboard": true,
+  "synthetic": true,
+  "fault": "one plugin-only StorageError before content commit; real HTTP503 and durable failed receipt",
+  "initial_failure_left_content_empty": true,
+  "failed_status_read_only_no_retry": true,
+  "explicit_retry_preserved_tuple": true,
+  "restore_post_count": 2,
+  "counts": {
+    "all": 3,
+    "inbox": 2,
+    "favorites": 1,
+    "read_later": 1,
+    "trash": 1
+  },
+  "inspected_export_after_reload_downloaded": true,
+  "inspection_download_mutation_requests": 0,
+  "page_errors": [],
+  "provider_calls": false
+}

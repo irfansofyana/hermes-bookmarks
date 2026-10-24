@@ -1,0 +1,142 @@
+{
+  "ok": true,
+  "actual_dashboard": true,
+  "actual_sdk_controls": true,
+  "synthetic": true,
+  "provider_calls": false,
+  "retained_body_setup": "Explicit synthetic Queue.complete fixture, not model output or publisher extraction",
+  "expected_network_fault": "One real settings commit acknowledgement deliberately aborted; conflict HTTP409 expected",
+  "rows": [
+    {
+      "check": "settings",
+      "theme": "dark",
+      "viewport": 1440,
+      "file": "bookmarks-ai-settings-dark-1440.png",
+      "left": 340,
+      "right": 1100,
+      "top": 18,
+      "bottom": 1082,
+      "width": 760,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)",
+      "background": "color(srgb 0.0550588 0.14149 0.137255)"
+    },
+    {
+      "check": "settings",
+      "theme": "dark",
+      "viewport": 390,
+      "file": "bookmarks-ai-settings-dark-390.png",
+      "left": 6,
+      "right": 384,
+      "top": 6,
+      "bottom": 1094,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)",
+      "background": "color(srgb 0.0550588 0.14149 0.137255)"
+    },
+    {
+      "check": "settings",
+      "theme": "light",
+      "viewport": 1440,
+      "file": "bookmarks-ai-settings-light-1440.png",
+      "left": 340,
+      "right": 1100,
+      "top": 18,
+      "bottom": 1082,
+      "width": 760,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)"
+    },
+    {
+      "check": "settings",
+      "theme": "light",
+      "viewport": 390,
+      "file": "bookmarks-ai-settings-light-390.png",
+      "left": 6,
+      "right": 384,
+      "top": 6,
+      "bottom": 1094,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)"
+    },
+    {
+      "check": "actual_revision_conflict_preserves_draft_and_requires_review",
+      "ok": true
+    },
+    {
+      "check": "actual_commit_lost_ack_get_only_reconciliation",
+      "ok": true,
+      "posts": 1
+    },
+    {
+      "check": "dirty_escape_keep_discard_and_opener_focus",
+      "ok": true
+    },
+    {
+      "check": "image_opt_in_blocks_explicit_send",
+      "ok": true
+    },
+    {
+      "check": "detail",
+      "theme": "light",
+      "viewport": 1440,
+      "file": "bookmarks-ai-detail-light-1440.png",
+      "left": 320,
+      "right": 1120,
+      "top": 18,
+      "bottom": 1082,
+      "width": 800,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)"
+    },
+    {
+      "check": "actual_manual_summary_tags_only_admission_poll_cancel",
+      "ok": true,
+      "request_id": "a608b416-f5bd-41f1-9222-1c684d780a54"
+    },
+    {
+      "check": "cold_reload_exact_receipt_inspection_has_zero_posts",
+      "ok": true
+    },
+    {
+      "check": "source-cleared",
+      "theme": "light",
+      "viewport": 390,
+      "file": "bookmarks-ai-source-cleared-light-390.png",
+      "left": 6,
+      "right": 384,
+      "top": 6,
+      "bottom": 1094,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)"
+    },
+    {
+      "check": "actual_retained_body_clear_preserves_import_source_summary_notes",
+      "ok": true
+    }
+  ],
+  "page_errors": [],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: net::ERR_FAILED"
+  ]
+}

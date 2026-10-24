@@ -1,0 +1,16 @@
+{
+  "name": "hermes-bookmarks-dev",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-ui.cjs",
+    "check:build": "node scripts/build-ui.cjs --check",
+    "test": "node --test tests/*.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "jsdom": "29.1.1",
+    "marked": "18.1.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  }
+}

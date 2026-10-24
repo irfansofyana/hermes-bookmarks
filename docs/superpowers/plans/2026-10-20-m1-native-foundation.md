@@ -66,8 +66,8 @@ Paths are relative to repository root. Do not create empty modules just to match
 
 **Produces:** Plugin-owned `describe_capabilities() -> dict[str, bool]`; package registration delegates to focused adapters. Compatibility table records public symbol/route, source locator, version, evidence level, and fallback for native navigation/context, inference/vision, storage root selection, lifecycle, attachments, and authorization on each host.
 
-- [ ] Read the relevant official docs/source sections, inspect working reference manifests/build/registration/bridge, and record exact revisions. Inspect only nonsecret system metadata. Do not clone private runtime configuration into the public repo. Check available isolated host runners before installing dependencies.
-- [ ] Write a capability-test failure first:
+- [x] Read the relevant official docs/source sections, inspect working reference manifests/build/registration/bridge, and record exact revisions. Inspect only nonsecret system metadata. Do not clone private runtime configuration into the public repo. Check available isolated host runners before installing dependencies.
+- [x] Write a capability-test failure first:
 
 ```python
 import unittest
@@ -81,10 +81,12 @@ class CapabilityTests(unittest.TestCase):
         self.assertTrue(all(type(v) is bool for v in caps.values()))
 ```
 
-- [ ] Run `rtk proxy python -m unittest discover -s tests -p test_host_bindings.py -v`; record the import failure. Implement capability detection from verified public surfaces, not hardcoded successful detection. An unmounted/unknown host reports unsupported. Add tests using public-shape host doubles, including a missing export.
-- [ ] Create the minimal package using verified manifest and registration syntax. Keep all routes read-only until the service task adds writes. Register a health response identifying this as a foundation preview. Do not copy a dependency list or minimum version without validation.
-- [ ] Run the same test to PASS; run the official validator using the command documented for the installed version. Record errors rather than removing required features to get a green result. Establish CI with equivalent Python/Node checks as each suite is added; use no credentials for unit tests.
-- [ ] Commit `chore: establish documented Hermes plugin boundaries`; update STATUS with exact evidence and unsupported capabilities. Missing direct embedding is acceptable if supported native handoff exists. No supported handoff on a target is a blocker to that target's acceptance.
+- [x] Run `rtk proxy python -m unittest discover -s tests -p test_host_bindings.py -v`; record the import failure. Implement capability detection from verified public surfaces, not hardcoded successful detection. An unmounted/unknown host reports unsupported. Add tests using public-shape host doubles, including a missing export.
+- [x] Create the minimal package using verified manifest and registration syntax. Keep all routes read-only until the service task adds writes. Register a health response identifying this as a foundation preview. Do not copy a dependency list or minimum version without validation.
+- [x] Run the same test to PASS; run the official validator using the command documented for the installed version. Record errors rather than removing required features to get a green result. Establish CI with equivalent Python/Node checks as each suite is added; use no credentials for unit tests.
+- [x] Commit `chore: establish documented Hermes plugin boundaries`; update STATUS with exact evidence and unsupported capabilities. Missing direct embedding is acceptable if supported native handoff exists. No supported handoff on a target is a blocker to that target's acceptance.
+
+Task 1 outcome: foundation package validated in isolation; target acceptance concerns remain. See `docs/verification/compatibility.md` and `.superpowers/sdd/2026-10-20-m1-native-foundation/task-1-report.md`. A documented Dashboard resume link is not a context-bearing composer handoff; Desktop source APIs are not real-host proof. Later task checkboxes remain untouched.
 
 ### Task 2: Durable shared save/get/search service
 
@@ -207,4 +209,4 @@ M1 owns working foundations, not final feature parity. The roadmap maps every sp
 
 ## Execution handoff
 
-Plan review is required before product code. Recommended method: **subagent-driven**, because host integration, persistence, worker lifecycle, and asset security deserve independent task-level review. Execute dependency order 1 → 2 → 3 → 4 → 5 → 6. Do not parallelize unestablished shared contracts. A future session reads AGENTS and STATUS first, verifies current branch/worktree and task evidence, and resumes the earliest incomplete step. Create an isolated worktree at execution time through the relevant skill.
+The owner approved execution using **subagents** on 2026-10-20. Task 1 is implemented on `feat/m1-native-foundation` in the isolated `m1` worktree; the controller owns review. Execute dependency order 1 → 2 → 3 → 4 → 5 → 6, continuing independent safe work while affected native-host acceptance remains blocked. Do not parallelize unestablished shared contracts. A future session reads AGENTS and STATUS first, verifies current branch/worktree and task evidence, and resumes the earliest incomplete step. No live installation, paid inference, push, merge or release is authorized by this approval.

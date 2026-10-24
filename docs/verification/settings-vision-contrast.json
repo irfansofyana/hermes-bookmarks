@@ -1,0 +1,140 @@
+{
+  "actual_dashboard": true,
+  "synthetic": true,
+  "provider_calls": false,
+  "rows": [
+    {
+      "theme": "dark",
+      "width": 1440,
+      "role": "body",
+      "foreground": "color(srgb 1 0.901961 0.796078)",
+      "background": "color(srgb 0.0550588 0.14149 0.137255)",
+      "contrast": 13.458798969447145,
+      "font_size": "15px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "role": "description",
+      "foreground": "oklab(0.938314 0.0158656 0.0420899 / 0.6)",
+      "background": "rgba(0, 0, 0, 0)",
+      "contrast": 5.6649016006123585,
+      "font_size": "13px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "role": "primary_hover",
+      "foreground": "rgb(4, 28, 28)",
+      "background": "color(srgb 1 0.901961 0.796078)",
+      "contrast": 14.67391852100603,
+      "font_size": "12px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "role": "body",
+      "foreground": "color(srgb 1 0.901961 0.796078)",
+      "background": "color(srgb 0.0550588 0.14149 0.137255)",
+      "contrast": 13.458798969447145,
+      "font_size": "15px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "role": "description",
+      "foreground": "oklab(0.938314 0.0158656 0.0420899 / 0.6)",
+      "background": "rgba(0, 0, 0, 0)",
+      "contrast": 5.6649016006123585,
+      "font_size": "13px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "role": "primary_hover",
+      "foreground": "rgb(4, 28, 28)",
+      "background": "color(srgb 1 0.901961 0.796078)",
+      "contrast": 14.67391852100603,
+      "font_size": "12px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "role": "body",
+      "foreground": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)",
+      "contrast": 4.801892505243776,
+      "font_size": "15px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "role": "description",
+      "foreground": "oklab(0.527864 -0.0327826 -0.257344 / 0.6)",
+      "background": "rgba(0, 0, 0, 0)",
+      "contrast": 2.563939365782208,
+      "font_size": "13px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": false
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "role": "primary_hover",
+      "foreground": "rgb(232, 242, 253)",
+      "background": "color(srgb 0 0.32549 0.992157)",
+      "contrast": 5.074410675842684,
+      "font_size": "12px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "role": "body",
+      "foreground": "color(srgb 0 0.32549 0.992157)",
+      "background": "color(srgb 0.873412 0.924078 0.992157)",
+      "contrast": 4.801892505243776,
+      "font_size": "15px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "role": "description",
+      "foreground": "oklab(0.527864 -0.0327826 -0.257344 / 0.6)",
+      "background": "rgba(0, 0, 0, 0)",
+      "contrast": 2.563939365782208,
+      "font_size": "13px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "role": "primary_hover",
+      "foreground": "rgb(232, 242, 253)",
+      "background": "color(srgb 0 0.32549 0.992157)",
+      "contrast": 5.074410675842684,
+      "font_size": "12px",
+      "letter_spacing": "normal",
+      "normal_text_4_5": true
+    }
+  ],
+  "all_normal_text_4_5": false
+}

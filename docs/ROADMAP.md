@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Status: proposed execution breakdown, based on the approved product direction. Detailed M1 plan awaits review. No product code has shipped.
+Status: M1 foundation, plugin-owned chat and their review-fix passes are implemented and published in draft PR #1; target acceptance remains partial. The library-first revision pulls nested organization, safe metadata/Markdown notes and standalone image records forward from M2/M4; recoverable trash and normalized/HTML imports are now implemented with actual-host/browser/restart evidence (see [verification](verification/trash-and-imports.md)); HTML/content export and atomic empty-target restore are now implemented locally with [actual host/native/browser/restart evidence](verification/export-and-restore.md), with consumed reviews/author fixes and exact-head draft PR publication/CI verified; settings and text/owned-image vision are implemented with [actual host/native/browser/restart evidence](verification/settings-and-vision.md), synthetic model tests and a disclosed real-provider trust blocker; rich-text/inline images remain unimplemented. The owner approved the written library-first [workspace design](superpowers/specs/2026-10-21-library-first-workspace-design.md). Its [implementation plan](superpowers/plans/2026-10-21-library-first-workspace.md) has been implemented with the approved hybrid review and one author fix pass for each consumed review. Two minor gaps remain deferred; current workspace verification distinguishes author-tested behavior from external target blockers and full spec/release acceptance. It brings organization, notes/image associations and presentation slices forward without claiming the remaining milestones are complete. PR publication and synthetic real-provider checks are approved; merge/release/live deployment are not. See `STATUS.md`.
 
 ## Delivery approach
 
@@ -10,7 +10,7 @@ The full product spans several subsystems; do not prewrite hundreds of speculati
 
 ## M1 — Native integration and durable capture
 
-Deliver a valid plugin package, minimal shared library, native save/get/search tools, two UI entrypoints, native Ask Hermes composition/handoff, one durable enrichment path, and one image upload/read path. Start with public-API compatibility evidence. Development stays outside active installation roots.
+Deliver a valid plugin package, minimal shared library, native save/get/search tools, two UI entrypoints, plugin-owned Hermes-backed chat with explicit Ask Hermes context, one durable enrichment path, and one image upload/read path. The older handoff approach is superseded. Start with public-API compatibility evidence. Development stays outside active installation roots.
 
 Exit: both emitted interfaces and native tools exercise the same service. Real-host checks either pass against recorded versions in an approved isolated environment or remain explicit blockers; fixtures alone do not establish compatibility. The native-chat constraint cannot be waived to finish the milestone.
 
@@ -24,7 +24,7 @@ Deliver nested collections with cycle checks, tags, filters, pagination, favorit
 
 Suggested ownership: `bookmarks/collections.py`, `bookmarks/imports/{records,html,preview,runner}.py`, `bookmarks/trash.py`, matching native-tool and HTTP adapters, `tests/imports/` with synthetic source fixtures.
 
-Before implementation: write a detailed test-first plan with exact contracts derived from M1. Tests must cover nested HTML, malformed imports, repeated jobs, stale previews, duplicate URLs, unknown metadata, notes already edited by users, and reconciled item counts. Imports do not fetch publishers or invoke AI by default. Source files remain unchanged.
+Current implementation: [approved trash/import plan](superpowers/plans/2026-10-21-trash-and-imports.md), [verification](verification/trash-and-imports.md). The organization, trash and import paths now exist; full cross-target acceptance is still separate. The detailed test-first plan uses exact contracts derived from M1. Tests must cover nested HTML, malformed imports, repeated jobs, stale previews, duplicate URLs, unknown metadata, notes already edited by users, and reconciled item counts. Imports do not fetch publishers or invoke AI by default. Source files remain unchanged.
 
 Exit: a chat-originated import and a UI-originated import produce identical validated data, preserve supported notes/tags/provenance, survive restart/cancel/retry, and return accurate reports.
 
@@ -33,6 +33,8 @@ Exit: a chat-originated import and a UI-originated import produce identical vali
 Depends on M1 jobs/assets and M2 edits/imports.
 
 Deliver rich-text notes with Markdown shortcuts and inline images, readable saved summaries, safe autosave/conflict handling, image items/covers, thumbnail delivery, durable settings and UI controls, text and vision enrichment, manual/generated provenance, bounded retries, pause/resume, concurrency safety, retention and asset-reference cleanup.
+
+Current settings/vision slice: [approved plan](superpowers/plans/2026-10-24-settings-and-vision.md), [verification](verification/settings-and-vision.md). Revisioned library settings, per-item requests/cancellation/status, manual summary protection, independent automatic fields, opt-in owned-image bytes, retained-source clearing and v2 compatibility exist. Real network success is NOT verified: both public-facade probes returned `PluginLlmTrustError` without changing active trust. Full rich-text/inline-image editing and all-target acceptance remain required.
 
 Suggested ownership: `bookmarks/notes.py`, `bookmarks/assets.py`, `bookmarks/settings.py`, `bookmarks/enrichment/{extract,generate,apply}.py`, focused shared UI components and tests.
 
@@ -44,9 +46,9 @@ Exit: links and standalone images receive configurable AI tags/summaries; manual
 
 Depends on functioning prior slices; refine shared UI continuously rather than waiting for M4 to begin styling.
 
-Deliver image-led grid/list views, comfortable detail reading, full nested navigation, visible selection/bulk actions, native Ask Hermes context actions, state-preserving native-chat navigation, responsive narrow-screen flows, host theme inheritance, keyboard/touch accessibility, reduced motion, and complete error/empty/pending states.
+Deliver image-led grid/list views, comfortable detail reading, full nested navigation, visible selection/bulk actions, Ask Hermes context actions, state-preserving in-plugin chat collapse/reopen, responsive narrow-screen flows, host theme inheritance, keyboard/touch accessibility, reduced motion, and complete error/empty/pending states. The library-first revision refines these requirements and stages an explicit Markdown-notes editor before the full rich-text editor; the latter remains required in M3.
 
-Use the host's exported primitives and native chat. No duplicate transcript, composer, model picker, or credential form. Include side-by-side composition only where public SDK support was proven; otherwise provide the approved explicit handoff. Record differences between Desktop and Dashboard. Chat uses session-scoped identity/model; enrichment uses its library route.
+Provide the plugin-owned chat UI alongside library work, using public presentation primitives where suitable and Hermes-backed execution. Do not replace it with a regular-session handoff. No copied host internals, new agent loop or separate credential form. Verify the backend/session/streaming contract before committing to an adapter. Record differences between Desktop and Dashboard. Chat uses session-scoped identity/model; enrichment uses its library route.
 
 Detailed plan includes actual emitted-bundle browser tests in both themes and widths, long titles, missing covers, large collections, unsaved notes during navigation, stale responses, focused session changes, existing composer drafts, and double clicks. Capture screenshots and inspect console/layout errors. Expected native chat capabilities are verified on the host, not recreated.
 
@@ -58,7 +60,7 @@ Depends on M2 records/imports and M3 assets/notes.
 
 Deliver bookmark HTML export and versioned lossless bundle export/restore, authenticated downloadable artifacts, explicit format limitations, installation/upgrade/uninstall docs, remote-client instructions, migrations/backups, risk/data-transfer disclosures, and exact-version compatibility evidence.
 
-Suggested ownership: `bookmarks/exports/{html,bundle}.py`, `tests/roundtrip/`, `docs/verification/release.md`, README installation sections only once exercised.
+Portability implementation: `bookmarks/portability/{content,archive,store}.py`, matching native/HTTP interfaces and Data UI; [approved plan](superpowers/plans/2026-10-23-export-and-restore.md), [execution evidence](verification/export-and-restore.md). It preserves the currently supported content schema, not a future editor format. Full release verification, installation/upgrade/uninstall docs and target/model gates remain required; README installation sections only once exercised.
 
 Tests must cover Unicode, empty library, rich notes, nested collections, duplicate filenames, assets shared by items, unsupported bundle versions, traversal/zip bombs, secret exclusion, restore conflicts, partial failure and exact supported-field round trips. Run full suites, official plugin validation, actual host smoke tests, and approved model tests. Verify exact-head CI and published files. No live deployment or release/catalog publication without approval.
 

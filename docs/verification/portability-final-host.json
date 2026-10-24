@@ -1,0 +1,123 @@
+{
+  "ok": true,
+  "actual_authenticated_hosts": true,
+  "provider_calls": false,
+  "checks": [
+    {
+      "check": "unauthorized_export_and_restore_rejected",
+      "ok": true
+    },
+    {
+      "check": "unauthorized_export_and_restore_rejected",
+      "ok": true
+    },
+    {
+      "check": "target_initially_empty",
+      "ok": true
+    },
+    {
+      "check": "artifact_ready",
+      "ok": true
+    },
+    {
+      "check": "export_receipt_idempotent",
+      "ok": true
+    },
+    {
+      "check": "export_lookup",
+      "ok": true
+    },
+    {
+      "check": "bounded_download_chunk",
+      "ok": true
+    },
+    {
+      "check": "full_download_integrity",
+      "ok": true
+    },
+    {
+      "check": "upload_exact_offset",
+      "ok": true
+    },
+    {
+      "check": "upload_resume_lookup",
+      "ok": true
+    },
+    {
+      "check": "preview_no_content_mutation",
+      "ok": true
+    },
+    {
+      "check": "restore_succeeded",
+      "ok": true
+    },
+    {
+      "check": "restore_idempotent",
+      "ok": true
+    },
+    {
+      "check": "restore_lookup",
+      "ok": true
+    },
+    {
+      "check": "target_identity_preserved",
+      "ok": true
+    },
+    {
+      "check": "item_page_counts_all",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "owned_asset_preview_bytes",
+      "ok": true
+    },
+    {
+      "check": "exact_owned_asset_bytes_and_mime",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "owned_asset_preview_bytes",
+      "ok": true
+    },
+    {
+      "check": "exact_owned_asset_bytes_and_mime",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "item_page_counts_trash",
+      "ok": true
+    },
+    {
+      "check": "exact_saved_item_projection",
+      "ok": true
+    },
+    {
+      "check": "restored_nonempty_target_rejects_new_preview",
+      "ok": true
+    },
+    {
+      "check": "html_explicitly_lossy",
+      "ok": true
+    }
+  ],
+  "compared_items": 4,
+  "artifact_id": "0636d376e4e345368c045cdb97eb651d",
+  "export_request_id": "2525ef1e-7338-4e25-b797-cb6357255798",
+  "archive_size": 2081,
+  "archive_digest": "d17d3fab93da4efd7102bebbf55e05e7624f1edb7412782e2145da6a1d30b5c4",
+  "restore_request_id": "4d22a2f1-6930-4442-a53d-a07f92ff45c5",
+  "restore_id": "b2db08ace7b54cf386e128b75c5bb735",
+  "target_identity": "33511d509d75ef57d46c13cd1bc602ac"
+}

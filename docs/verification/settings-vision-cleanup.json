@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "owned_servers_stopped": true,
+  "ports": [
+    {
+      "host": "127.0.0.1",
+      "port": 32799,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 33437,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 34063,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 34307,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 37527,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 37917,
+      "closed": true
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 37953,
+      "closed": true
+    }
+  ],
+  "active_installation_or_service_changed": false
+}

@@ -1,0 +1,117 @@
+{
+  "ok": true,
+  "actual_dashboard": true,
+  "synthetic": true,
+  "provider_calls": false,
+  "artifact_id": "6d65384291db421797b9d7fa2ee8e5c9",
+  "archive_digest": "18ef6beb22e26151c04b5f5bced94653a16a3f1132c9862dd9259d43d793911f",
+  "archive_size": 2082,
+  "restore_request_id": "aec756e2-f551-4054-b007-8b93d1ccd68b",
+  "rows": [
+    {
+      "check": "export",
+      "theme": "dark",
+      "viewport": 1440,
+      "file": "bookmarks-data-export-dark-1440.png",
+      "left": 410,
+      "right": 1030,
+      "width": 620,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "check": "export",
+      "theme": "dark",
+      "viewport": 390,
+      "file": "bookmarks-data-export-dark-390.png",
+      "left": 6,
+      "right": 384,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "check": "export",
+      "theme": "light",
+      "viewport": 1440,
+      "file": "bookmarks-data-export-light-1440.png",
+      "left": 410,
+      "right": 1030,
+      "width": 620,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)"
+    },
+    {
+      "check": "export",
+      "theme": "light",
+      "viewport": 390,
+      "file": "bookmarks-data-export-light-390.png",
+      "left": 6,
+      "right": 384,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 0 0.32549 0.992157)"
+    },
+    {
+      "check": "actual_blob_download_integrity",
+      "ok": true,
+      "size": 2082
+    },
+    {
+      "check": "restore-preview",
+      "theme": "dark",
+      "viewport": 1440,
+      "file": "bookmarks-data-restore-preview-dark-1440.png",
+      "left": 410,
+      "right": 1030,
+      "width": 620,
+      "height": 1064,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "check": "restore-preview",
+      "theme": "dark",
+      "viewport": 390,
+      "file": "bookmarks-data-restore-preview-dark-390.png",
+      "left": 2.3046875,
+      "right": 387.6953125,
+      "width": 385.390625,
+      "height": 1087.265625,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "check": "restore-result",
+      "theme": "dark",
+      "viewport": 390,
+      "file": "bookmarks-data-restore-result-dark-390.png",
+      "left": 6,
+      "right": 384,
+      "width": 378,
+      "height": 1088,
+      "overflow": false,
+      "document_overflow": false,
+      "text_color": "color(srgb 1 0.901961 0.796078)"
+    },
+    {
+      "check": "explicit_preview_confirm_and_real_restore",
+      "ok": true
+    },
+    {
+      "check": "page_reload_read_only_reconciliation",
+      "ok": true
+    }
+  ],
+  "page_errors": []
+}

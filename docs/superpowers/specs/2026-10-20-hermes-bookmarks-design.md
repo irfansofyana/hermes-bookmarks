@@ -1,8 +1,10 @@
 # Hermes Bookmarks — Design specification
 
 Date: 2026-10-20
-Status: Product direction approved for implementation planning; detailed milestone plan review precedes product implementation.
+Status: Product direction and M1 execution approved using subagents on 2026-10-20; Task 1 foundation preview implemented with concerns. Requirements below remain release targets, not completed functionality. See `docs/STATUS.md`.
 Repository: irfansofyana/hermes-bookmarks (public).
+
+Layout refinement (2026-10-21): the owner approved the written [workspace design](2026-10-21-library-first-workspace-design.md) with a collapsible panel, collections/tags and Add/Edit popup. Its [test-first implementation plan](../plans/2026-10-21-library-first-workspace.md) is ready for required review, retaining hybrid execution. The refinement does not establish implementation or waive rich-text, vision, import/export or target-acceptance requirements.
 
 ## 1. Intent and agreed constraints
 
@@ -14,7 +16,7 @@ One shared library per Hermes backend installation is the v1 default and only li
 
 The owner requires adherence to official Hermes documentation and has identified irfansofyana/hermes-blogwatcher as a working implementation reference. Reuse public Hermes SDKs, exported components, libraries, and supported extension points. Do not modify Hermes core, fork its chat implementation, import private modules, monkey-patch host behavior, or reach into host DOM/React internals. Availability must be checked against the chosen host version on both surfaces.
 
-Native Hermes chat integration is required. A custom transcript renderer, composer, agent loop, model-picker implementation, or provider credential store is out of scope and prohibited as a workaround. If the public SDK cannot provide a requested composition, expose the supported native-chat handoff and document the limitation. Any change to this boundary requires owner approval.
+Owner clarification on 2026-10-21: an in-plugin chat interface is required while Bookmarks is open. It is not the usual Hermes session-chat screen or a navigation handoff to it. Plugin-owned conversation presentation is allowed. Reuse documented Hermes agent/session/provider facilities underneath and exported UI components where appropriate; do not copy private chat internals, modify core, create a separate agent loop or keep separate provider credentials. This clarification supersedes the earlier prohibition on plugin-owned presentation, not the public-API/backend constraints.
 
 ## 2. User experience
 
@@ -38,17 +40,17 @@ The UI must feel like a polished AI-native bookmark application within Hermes. U
 - Provide visible keyboard focus, accessible names, keyboard alternatives to drag actions, adequate contrast, and reduced-motion behavior. Loading placeholders reserve layout space; errors preserve user input and offer a clear retry.
 - Pending actions disable only conflicting controls. Prevent duplicate submissions; show saved confirmation only after persistence succeeds. Provide recoverable trash and a straightforward restore path.
 
-### 2.2 Native Hermes conversation experience
+### 2.2 Bookmarks-owned conversation experience
 
-The user wants their usual Hermes conversation experience while working with the library. Reuse the actual host chat surface and public SDK integration; do not build an imitation within the plugin.
+The user wants a chat UI inside Bookmarks, available while the plugin remains open. The owner supplied Hermes Learning as the implementation reference. Its inspected source has its own TutorPanel and controller over real Hermes sessions, using Desktop host request/events and Dashboard SDK-authenticated WebSocket transport. See `docs/verification/in-plugin-chat-reference.md` for pinned source and focused tests; this is reference evidence, not implemented Bookmarks chat. The visible conversation belongs to the plugin experience rather than the usual Hermes session-chat screen. Reusing Hermes underneath does not require reusing or navigating to that screen.
 
-Preferred composition: expose the bookmark library alongside native Hermes chat using supported host layout or pane APIs. Embed a host-provided chat component only if it is publicly exported and documented for plugin use. Where a host cannot compose both views, provide an explicit Open in Hermes chat handoff through a supported navigation/composer API, preserve library state, and make returning easy. Treat Desktop and Dashboard as separate capability checks. If no supported handoff exists on either target, report a compatibility blocker rather than claiming parity or adding a custom chat implementation.
+Keep library/item context and conversational interaction within the open plugin on Desktop and Dashboard. The owner-approved layout direction is library-first with a collapsible right-side chat panel, initially closed; narrow layouts switch between Library and Chat within the plugin. See the workspace refinement for lifecycle, organization and form behavior. Publicly exported components may be reused, but the UI must not be contingent on exporting the entire usual Hermes chat screen. A handoff to that screen is not a substitute for this requirement. Dedicated Hermes-backed sessions and profile-scoped binding metadata are now implemented in the foundation; runtime evidence and remaining per-client gates are recorded separately in `docs/verification/in-plugin-chat.md`.
 
-Expected chat capabilities are inherited from the selected native host surface: Markdown, tables/code, streaming replies, tool activity and results, explicit plans/task progress, approvals and clarification requests, interruption, session history/resume, and host-supported model/provider selection. Verify which are available in each target version and record limitations. Do not recreate missing host features or fabricate tool/progress events. Planning means user-visible plans emitted by Hermes; hidden reasoning is not a product requirement.
+Expected conversation behavior includes Markdown, tables/code, streaming replies, actual tool activity/results, user-visible plans/progress, approvals/clarification, stop and history/resume. Render real backend events using public contracts; do not fabricate progress or implement a replacement agent/approval engine. Provider credentials and execution remain Hermes-owned. Verify supported capabilities and public reusable controls for each target. Planning means user-visible plans emitted by Hermes, not hidden reasoning.
 
-An Ask Hermes action identifies a bookmark, selected items, or a collection and sends bounded references and a user-editable request through the supported composer/context mechanism. Let native tools retrieve authorized details on demand. Do not inject the entire library, private notes, or embedded note images automatically. Showing or preparing a draft does not itself submit a message or incur inference cost. Any Send action must be explicit and target the intended session; do not overwrite an existing draft or fall through to an unrelated chat.
+An Ask Hermes action selects bounded bookmark, selection or collection references as context for the plugin chat and exposes a user-editable request there. It must not navigate away to the usual session-chat screen. Let native tools retrieve authorized details on demand. Do not inject the entire library, private notes, or embedded note images automatically. Showing or preparing a draft does not itself submit a message or incur inference cost. Any Send action must be explicit and target the intended session; do not overwrite an existing draft or fall through to an unrelated chat.
 
-Keep conversation ownership explicit: use the selected Hermes profile/session, its identity, enabled tools, approvals, and history. Shared library access does not merge chat histories across profiles. Native chat uses the session's host-managed model and provider; background enrichment uses the library's separately configured execution route. Changing one must not silently change the other. Do not add a second chat model picker or credential form.
+Keep backend conversation ownership explicit: profile, session/thread, tool permissions, approvals, history and cancellation target must be defined by the public integration contract. Do not silently attach the plugin to whichever ordinary chat happens to be focused. Whether a dedicated Hermes-managed session underlies the UI is an implementation decision still to verify. Shared library access does not merge unrelated histories. Conversation inference and background library enrichment remain separately scoped; reuse Hermes configuration and credentials rather than building a second credential system.
 
 Library changes made by native tools must refresh the relevant view through supported events or bounded query invalidation, without losing unsaved notes or current selection. Bookmark summaries and chat responses remain separate records; do not copy a conversation response into personal notes without an explicit save action.
 
@@ -148,7 +150,7 @@ Export targets: portable bookmark HTML for links and a versioned full-fidelity b
 
 ## 9. Architecture proposal
 
-Use one shared backend service layer, SQLite persistence, backend-owned attachment storage, and persistent enrichment jobs. Thin native-tool and authenticated HTTP adapters call the same service. Native conversation rendering, session lifecycle, model selection, approvals, and tool execution remain host-owned; the plugin contributes contextual actions and native tools only. Background enrichment and conversational agent turns are separate integration paths. Share UI components and scoped styles where feasible, but emit distinct Desktop and Dashboard entrypoints using their documented SDKs.
+Use one shared backend service layer, SQLite persistence, backend-owned attachment storage, and persistent enrichment jobs. Thin native-tool and authenticated HTTP adapters call the same service. The plugin owns its conversation presentation and contextual library actions; Hermes supplies the public backend execution/session/provider/approval facilities. Verify that integration rather than implementing another agent loop or replacing provider authentication. Background enrichment and conversational agent turns are separate integration paths. Share UI components and scoped styles where feasible, but emit distinct Desktop and Dashboard entrypoints using their documented SDKs.
 
 Keep storage, item/collection operations, notes/assets, import/export, extraction, inference, jobs, and host adapters separately testable. Database migrations must preserve existing user data. Resolve a shared installation-level data root explicitly; do not silently use an active-profile path and thereby create separate libraries.
 
@@ -179,12 +181,12 @@ The implementation must demonstrate:
 - Host theme switching works on both interfaces at wide and narrow widths.
 - Export/restore preserves supported metadata, notes, and assets; lossy HTML limitations are explicit.
 - URL, upload, note-rendering, and authorization protections are exercised.
-- Ask Hermes uses the actual native host chat, preserves existing drafts and library state, and targets the intended session. Missing capabilities fail visibly instead of sending to another session.
-- Native Markdown, tool-call, plan/progress, approval, stop, and history behavior is exercised and documented per host version; no custom replacement renderer or agent loop is introduced.
+- Chat is usable while Bookmarks stays open on both clients. Ask Hermes selects context in that plugin-owned UI, preserves drafts/library state and targets its explicitly owned backend conversation. It must not mutate an unrelated ordinary Hermes chat or substitute navigation to it.
+- Plugin conversation Markdown, real streaming/tool/plan events, approval/stop and history behavior are exercised against the supported backend contract per host version. Plugin-owned presentation is permitted; copied private UI, fabricated events and a replacement agent loop are not.
 - Chat profile/model selection remains independent of shared-library enrichment settings. Context transfer is bounded and explicit.
 - A chat-driven normalized-record import preserves notes, tags, provenance, and attachments, survives retry/cancellation, and leaves source files unchanged.
 - Real rendered UI is reviewed in both themes and at wide/narrow widths, including long titles, missing covers, rich notes, multi-selection, empty/error states, keyboard navigation, and theme changes. Capture screenshots and check layout and console errors.
-- Source and dependency review confirms no Hermes core changes, private-module imports, DOM interception, copied internal chat components, or duplicate chat/provider implementation.
+- Source and dependency review confirms no Hermes core changes, private-module imports, DOM interception, copied internal chat components, or duplicate agent/provider implementation. Plugin-owned conversation presentation is intentional.
 
 Use unit, integration, emitted-bundle, browser, and real-host verification. Run the official plugin validator against the targeted host version. Report mocked inference, synthetic preview data, skipped tests, and real model tests separately. Paid inference tests require authorization. Deployment/restarts require separate approved scope; do not alter live plugins while developing.
 
@@ -192,9 +194,9 @@ Use unit, integration, emitted-bundle, browser, and real-host verification. Run 
 
 Deferred: profile-private libraries, semantic search, multi-user sharing, independent-backend sync, browser extension, highlights, full-page archival, PDF/video support, and separate appearance overrides.
 
-Resolve these engineering gates inside the first development milestone before dependent feature work, not through a separate prerequisite research project. Record a host-version compatibility matrix for native-chat composition/handoff, composer and context APIs, exported components, session identity, and model selection separately on Desktop and Dashboard. Publicly unavailable chat composition is a documented limitation, never permission for a custom chat UI or core patch. Also inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
+Resolve these engineering gates inside the first development milestone before dependent feature work, not through a separate prerequisite research project. Record a host-version compatibility matrix for the plugin-owned UI's public backend execution/streaming/session contract, exported presentation components and provider configuration separately on Desktop and Dashboard. Missing automatic handoff to the usual chat screen is not itself a blocker for this design; missing supported backend execution is. Do not replace that backend with a custom agent loop or a core patch. Also inspect official contracts for shared storage, job/service lifecycle, Desktop and Dashboard adapters, inference model overrides and vision input, chat attachments, authentication, and approvals. Resolve numeric resource limits, exact schemas, and importer compatibility with evidence. These are explicit engineering gates, not claims of supported behavior.
 
-No runtime compatibility, installation, catalog listing, or release is established by this document. Next: review the detailed milestone implementation plan and select its execution method.
+This specification does not establish runtime compatibility, installation, catalog listing, or release. M1 execution is now approved; Task 1's isolated package validation and unresolved host limits are recorded in `docs/verification/compatibility.md`. Continue through the detailed plan and `docs/STATUS.md`; do not reopen execution-method selection.
 
 ## References
 

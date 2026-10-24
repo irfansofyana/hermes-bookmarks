@@ -1,0 +1,153 @@
+{
+  "ok": true,
+  "actual_host": true,
+  "mode": "synthetic_write",
+  "checks": [
+    {
+      "check": "unauthorized_import_read",
+      "ok": true
+    },
+    {
+      "check": "unauthorized_import_write",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/preview",
+      "ok": true
+    },
+    {
+      "check": "preview_reconciles",
+      "ok": true
+    },
+    {
+      "check": "http_/items",
+      "ok": true
+    },
+    {
+      "check": "preview_no_item_writes",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/start",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/start",
+      "ok": true
+    },
+    {
+      "check": "idempotent_start",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/requests/9f8952ca-1864-4875-a363-ee3188f14489",
+      "ok": true
+    },
+    {
+      "check": "readonly_request_lookup",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/4555f5cbb5fb4cbc9e13d03eaf69ce48",
+      "ok": true
+    },
+    {
+      "check": "exact_terminal_counts",
+      "ok": true
+    },
+    {
+      "check": "http_/items/53598b1d-eb6a-4f40-8e43-135a978c5142",
+      "ok": true
+    },
+    {
+      "check": "import_provenance_not_generated",
+      "ok": true
+    },
+    {
+      "check": "http_/items/53598b1d-eb6a-4f40-8e43-135a978c5142/trash",
+      "ok": true
+    },
+    {
+      "check": "http_/items",
+      "ok": true
+    },
+    {
+      "check": "trash_excluded",
+      "ok": true
+    },
+    {
+      "check": "http_/items/53598b1d-eb6a-4f40-8e43-135a978c5142/restore",
+      "ok": true
+    },
+    {
+      "check": "restore_keeps_notes",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/preview",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/start",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/2ae5317435ac470484c19fe18ecb06f9",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/2ae5317435ac470484c19fe18ecb06f9",
+      "ok": true
+    },
+    {
+      "check": "actual_html_import",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/preview",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/start",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/67a9a9122aae4191a19cc410782bb1d0/cancel",
+      "ok": true
+    },
+    {
+      "check": "cancel_reconciles",
+      "ok": true
+    },
+    {
+      "check": "http_/imports/67a9a9122aae4191a19cc410782bb1d0",
+      "ok": true
+    },
+    {
+      "check": "cancel_stops_progress",
+      "ok": true
+    }
+  ],
+  "job_id": "4555f5cbb5fb4cbc9e13d03eaf69ce48",
+  "item_id": "53598b1d-eb6a-4f40-8e43-135a978c5142",
+  "html_job_id": "2ae5317435ac470484c19fe18ecb06f9",
+  "cancel_processed": 0,
+  "cancel_remaining": 100,
+  "provider_calls": false
+}

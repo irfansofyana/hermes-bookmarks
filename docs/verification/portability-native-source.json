@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "actual_native_registry": true,
+  "mode": "source",
+  "tools_exercised": [
+    "bookmark_export_create",
+    "bookmark_export_get",
+    "bookmark_export_read"
+  ],
+  "size": 2080,
+  "digest": "6a803e7fa895af105525ffd712f6bf3eb2dad31b3e331e662ad742e4faee382f",
+  "provider_calls": false
+}

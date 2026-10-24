@@ -1,0 +1,32 @@
+{
+  "rule": "inline_shell_exec",
+  "regex_matches": [
+    {
+      "file": "desktop/plugin.js",
+      "matches": [
+        "!`)/,ye=/^( {2,}|\\\\)\\n(?!\\s*$)[ \\t]*/,tt=/^(`",
+        "!`))*?\\]\\((?:\\\\[\\s\\S]|[^\\\\\\(\\)]|\\((?:\\\\[\\s\\S]|[^\\\\\\(\\)])*\\))*\\)/).replace(\"precode-\",De?\"(?<!`",
+        "!`)/).replace(\"html\",/<(?! )[^<>]*?>/).getRegex(),Ae=/^(?:\\*+(?:((?!\\*)punct)|([^\\s*]))?)|^_+(?:((?!_)punct)|([^\\s_]))?/,at=u(Ae,\"u\").replace(/punct/g,R).getRegex(),ot=u(Ae,\"u\").replace(/punct/g,Re).getRegex(),ct=/^(?:\\*+(?:((?!\\*)(?!openQuote)punct)|([^\\s*]))?)|^_+(?:((?!_)(?!openQuote)punct)|([^\\s_]))?/,pt=u(ct,\"u\").replace(/openQuote/g,nt).repla",
+        "!`)|`",
+        "!`)[^`",
+        "!`)|`",
+        "!`)[^`",
+        "!`)|`"
+      ]
+    },
+    {
+      "file": "dashboard/dist/index.js",
+      "matches": [
+        "!`)/,ye=/^( {2,}|\\\\)\\n(?!\\s*$)[ \\t]*/,tt=/^(`",
+        "!`))*?\\]\\((?:\\\\[\\s\\S]|[^\\\\\\(\\)]|\\((?:\\\\[\\s\\S]|[^\\\\\\(\\)])*\\))*\\)/).replace(\"precode-\",De?\"(?<!`",
+        "!`)/).replace(\"html\",/<(?! )[^<>]*?>/).getRegex(),Ae=/^(?:\\*+(?:((?!\\*)punct)|([^\\s*]))?)|^_+(?:((?!_)punct)|([^\\s_]))?/,at=u(Ae,\"u\").replace(/punct/g,R).getRegex(),ot=u(Ae,\"u\").replace(/punct/g,Re).getRegex(),ct=/^(?:\\*+(?:((?!\\*)(?!openQuote)punct)|([^\\s*]))?)|^_+(?:((?!_)(?!openQuote)punct)|([^\\s_]))?/,pt=u(ct,\"u\").replace(/openQuote/g,nt).repla",
+        "!`)|`",
+        "!`)[^`",
+        "!`)|`",
+        "!`)[^`",
+        "!`)|`"
+      ]
+    }
+  ],
+  "note": "Recorded scanner output is caution, not a clean-security verdict. Inspect lexer matches in delivered JavaScript separately from executable shell behavior."
+}

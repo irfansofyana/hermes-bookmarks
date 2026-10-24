@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "actual_native_registry": true,
+  "synthetic": true,
+  "provider_calls": false,
+  "new_operations": [
+    "bookmark_enrich",
+    "bookmark_enrichment_cancel",
+    "bookmark_enrichment_get",
+    "bookmark_enrichment_request_get",
+    "bookmark_settings_get",
+    "bookmark_settings_update",
+    "bookmark_source_clear"
+  ],
+  "tools_exercised": [
+    "bookmark_backup_preview",
+    "bookmark_backup_restore",
+    "bookmark_backup_upload_chunk",
+    "bookmark_backup_upload_create",
+    "bookmark_enrich",
+    "bookmark_enrichment_cancel",
+    "bookmark_enrichment_get",
+    "bookmark_enrichment_request_get",
+    "bookmark_get",
+    "bookmark_search",
+    "bookmark_settings_get",
+    "bookmark_settings_update",
+    "bookmark_source_clear"
+  ],
+  "v1_restore_inert": true,
+  "restored_counts": {
+    "assets": 1,
+    "collections": 2,
+    "item_assets": 2,
+    "item_tags": 3,
+    "items": 3,
+    "sources": 1,
+    "tags": 3
+  }
+}

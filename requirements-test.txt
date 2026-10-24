@@ -1,0 +1,7 @@
+# Unit-test harness only; not plugin runtime dependencies or a Hermes support floor.
+# Validated in isolated CPython 3.11 and 3.14 environments; see compatibility.md.
+fastapi==0.133.1
+httpx==0.28.1
+PyYAML==6.0.3
+Pillow==12.3.0
+python-multipart==0.0.32
