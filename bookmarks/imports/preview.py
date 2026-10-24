@@ -65,13 +65,11 @@ class ImportStore:
             if preview['digest']!=input_digest or preview['expires_at']<=time.time():raise ConflictError()
             opts=json.loads(preview['options']);settings=None
             if opts['enrich']:
-                route=c.execute("SELECT value FROM library_config WHERE key='enrichment_route'").fetchone()
-                if route is None:raise ConfigurationError()
-                from ..jobs import validate_settings
-                try:
-                    value=json.loads(route['value']);settings=validate_settings(value)
-                    if not all(value.get(k) for k in ('provider','model','owner_profile')):raise ValueError()
-                except (ValueError,TypeError):raise ConfigurationError() from None
+                from ..settings import read_settings,snapshot_settings
+                value=read_settings(c)
+                if not value['route_ready']:raise ConfigurationError()
+                snapshot={**snapshot_settings(c),'fields':['summary','tags'],'primary_asset_id':None,'summary_revision':0}
+                settings=encoded(snapshot)
             key=uuid4().hex;total=json.loads(preview['report'])['total']
             c.execute('''INSERT INTO import_jobs(id,preview_id,request_id,digest,total,settings,created_at)
                 VALUES(?,?,?,?,?,?,?)''',(key,preview_id,request_id,input_digest,total,settings,time.time()))

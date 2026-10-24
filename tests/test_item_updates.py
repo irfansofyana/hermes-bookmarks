@@ -42,7 +42,7 @@ class ItemUpdateTests(unittest.TestCase):
     def test_invalid_references_and_unknown_or_source_fields_rollback_all_changes(self):
         for changes in ({'title':'Lost','collection_id':'missing','add_tags':['Lost']},
                         {'title':'Lost','attachment_ids':['a'*32]}, {'url':'https://example.org/replace'},
-                        {'kind':'image'},{'primary_asset_id':'a'*32},{'summary':'fake'},{'extra':True}):
+                        {'kind':'image'},{'primary_asset_id':'a'*32},{'generated_provenance':'fake'},{'extra':True}):
             with self.subTest(changes=changes), self.assertRaises((ValidationError,NotFoundError)):
                 self.service.update(self.item['id'],1,changes)
             self.assertEqual(self.service.get(self.item['id']),self.item)

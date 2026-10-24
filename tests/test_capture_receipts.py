@@ -82,15 +82,15 @@ class CaptureReceiptTests(unittest.TestCase):
             with self.subTest(kwargs=kwargs),self.assertRaises((ValidationError,NotFoundError)): self.service.capture(**kwargs)
         self.assertEqual(self.service.search()['total'],0)
 
-    def test_legacy_duplicate_can_queue_previously_unprocessed_link_without_overwrite(self):
+    def test_duplicate_never_implicitly_enriches_previously_unprocessed_link(self):
         first=self.service.capture(url='https://example.org/preexisting',notes='Keep',tags=['Manual'])['item']
         configured=BookmarkService(self.root,enrichment_settings={})
         saved=configured.save_link(first['url'],'Do not overwrite')
         self.assertEqual(saved['id'],first['id']); self.assertEqual(saved['notes'],'Keep')
         self.assertEqual(saved['title'],first['title']); self.assertEqual(saved['tags'],['Manual'])
-        self.assertEqual(saved['enrichment_status'],'pending')
+        self.assertEqual(saved['enrichment_status'],'not_started')
         with self.service._storage._transaction() as c:
-            self.assertEqual(c.execute('SELECT count(*) FROM jobs').fetchone()[0],1)
+            self.assertEqual(c.execute('SELECT count(*) FROM jobs').fetchone()[0],0)
             self.assertEqual(c.execute('SELECT count(*) FROM capture_operations').fetchone()[0],0)
 
     def test_receipt_keys_are_scoped_to_selected_library(self):

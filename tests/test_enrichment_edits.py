@@ -115,6 +115,6 @@ class EnrichmentEditTests(unittest.TestCase):
                 c.execute('UPDATE items SET revision=8')
             service=BookmarkService(root); queue=JobQueue(root)
             lease=queue.claim('worker',100,30)
-            self.assertFalse(queue.complete(lease['id'],'worker',RESULT,token=lease['token'],now=110))
+            self.assertIsNone(lease,'Inactive migrated job must not be claimed or call a provider')
             self.assertEqual(service.get('legacy')['revision'],8)
             self.assertEqual(queue.get('cancelled-job')['state'],'cancelled')

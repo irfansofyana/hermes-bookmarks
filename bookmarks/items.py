@@ -12,7 +12,7 @@ from .labels import validate_text
 from .tags import normalize_tags, apply_manual
 from .urls import validate_url
 
-EDIT_FIELDS = {'title','description','notes','collection_id','favorite','read_later','add_tags','remove_tags','attachment_ids'}
+EDIT_FIELDS = {'title','description','notes','summary','collection_id','favorite','read_later','add_tags','remove_tags','attachment_ids'}
 
 
 def validate_operation_key(value):
@@ -44,10 +44,10 @@ def attachment_ids(values):
 
 def metadata(values):
     result = dict(values)
-    for key in ('title','description','notes'):
+    for key in ('title','description','notes','summary'):
         if key in result:
-            validate_text(result[key],max_chars=1000 if key=='title' else None,
-                          max_bytes={'title':None,'description':16384,'notes':65536}[key])
+            validate_text(result[key],max_chars={'title':1000,'summary':16000}.get(key),
+                          max_bytes={'title':None,'description':16384,'notes':65536,'summary':None}[key])
     for key in ('favorite','read_later'):
         if key in result and type(result[key]) is not bool:
             raise ValidationError()
@@ -154,16 +154,13 @@ class ItemStore:
                 associations(connection,item_id,primary_asset_id,ids)
                 apply_manual(connection,item_id,labels,[])
             row = load(connection,item_id)
-            if kind=='link' and row['deleted_at'] is None and enrichment_settings is not None and row['enrichment_status']=='not_started':
-                from .jobs import validate_settings
-                encoded = validate_settings(enrichment_settings)
-                prior_job = connection.execute('SELECT id FROM jobs WHERE item_id=? AND revision=?',(item_id,row['revision'])).fetchone()
-                if prior_job is None:
-                    job_id = str(uuid4())
-                    generation = row['enrichment_generation']+(1 if outcome=='duplicate' else 0)
-                    connection.execute('INSERT INTO jobs(id,item_id,revision,generation,settings) VALUES(?,?,?,?,?)',
-                                       (job_id,item_id,row['revision'],generation,encoded))
-                    connection.execute("UPDATE items SET enrichment_status='pending',enrichment_job_id=?,enrichment_generation=? WHERE id=?",(job_id,generation,item_id))
+            from .settings import read_settings
+            configured = read_settings(connection)
+            managed = enrichment_settings is not None or (_connection is None and configured['revision']>1)
+            if outcome=='created' and managed:
+                from .enrichment_requests import admit_automatic
+                snapshot=enrichment_settings if isinstance(enrichment_settings,dict) and 'version' in enrichment_settings else None
+                admit_automatic(connection,item_id,snapshot)
             item = project(connection,item_id)
             result_receipt = None
             if operation_key is not None:
@@ -199,6 +196,8 @@ class ItemStore:
             associations(connection,item_id,row['primary_asset_id'],values['attachment_ids'])
         if 'add_tags' in values or 'remove_tags' in values:
             apply_manual(connection,item_id,values.get('add_tags',[]),values.get('remove_tags',[]))
+        if 'summary' in values:
+            connection.execute("UPDATE items SET summary_source='manual',summary_revision=summary_revision+1 WHERE id=?",(item_id,))
         scalars = {key:value for key,value in values.items() if key not in {'add_tags','remove_tags','attachment_ids'}}
         if scalars:
             # Keys originate only from EDIT_FIELDS; values are always bound.

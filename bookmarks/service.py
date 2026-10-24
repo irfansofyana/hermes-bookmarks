@@ -26,6 +26,9 @@ class BookmarkService:
     def __init__(self, data_root: Path, *, enrichment_settings=None):
         self._storage = Storage(data_root)
         self._enrichment_settings = enrichment_settings
+        if enrichment_settings and all(enrichment_settings.get(k) for k in ('provider','model','owner_profile')):
+            from .settings import SettingsStore
+            SettingsStore(self._storage).seed_route(enrichment_settings)
 
     def save_link(self, url: str, title: str = "") -> dict:
         validate_url(url)
@@ -123,6 +126,35 @@ class BookmarkService:
     def settings_update(self, expected_revision, changes):
         from .settings import SettingsStore
         return SettingsStore(self._storage).update(expected_revision, changes)
+
+    def enrich(self,item_id,expected_revision,request_id,fields):
+        from .enrichment_requests import EnrichmentRequests
+        return EnrichmentRequests(self._storage).enrich(item_id,expected_revision,request_id,fields)
+
+    def enrichment_request_get(self,request_id):
+        from .enrichment_requests import EnrichmentRequests
+        return EnrichmentRequests(self._storage).request_get(request_id)
+
+    def enrichment_get(self,job_id):
+        from .enrichment_requests import EnrichmentRequests
+        return EnrichmentRequests(self._storage).get(job_id)
+
+    def enrichment_cancel(self,job_id):
+        from .enrichment_requests import EnrichmentRequests
+        return EnrichmentRequests(self._storage).cancel(job_id)
+
+    def source_clear(self,item_id,expected_revision):
+        from .collections import revision
+        from .items import load,project
+        from .errors import ConflictError
+        import time
+        revision(expected_revision)
+        with self._storage._transaction(write=True) as c:
+            item=load(c,item_id,expected_revision)
+            if item['deleted_at'] is not None:raise ConflictError(item['revision'])
+            if item['extracted_text']:
+                c.execute("UPDATE items SET extracted_text='',revision=revision+1,updated_at=? WHERE id=?",(time.time(),item_id))
+            return project(c,item_id)
 
     def identity(self):
         with self._storage._transaction() as connection:
