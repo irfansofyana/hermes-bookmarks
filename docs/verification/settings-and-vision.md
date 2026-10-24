@@ -93,4 +93,6 @@ rtk proxy node scripts/settings_vision_metrics.cjs "$SOURCE_ORIGIN" contrast.jso
 rtk proxy python tests/host/settings_vision_readback.py "$SOURCE_ORIGIN" "$SOURCE_TOKEN_FILE" after.json --compare before.json
 ```
 
+The code/evidence tree was published at `df111844478a2f6e7efb563d8d0d25321b93793d`: push40103212863 and PR40103215836 both succeeded, each with exact-SHA Node/Python3.11/Python3.14 jobs. [Immutable publication evidence](settings-vision-publication.json). A subsequent documentation-only final head is verified separately in the PR handoff; these run IDs apply only to df111844, never a later commit.
+
 The native harness requires the real Hermes source/runtime in an isolated home. Provider probe uses the existing public configuration/facade and never grants trust. Exact pushed HEAD, Actions push/PR run IDs and individual job conclusions are recorded in the PR#1 handoff after publication; code evidence SHA above is not extrapolated to a later commit. PR remains draft/open/unmerged; merge/release/live deployment belong to the owner.
