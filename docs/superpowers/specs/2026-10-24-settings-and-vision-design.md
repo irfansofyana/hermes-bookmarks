@@ -1,7 +1,7 @@
 # Library settings and text/vision enrichment
 
 Date: 2026-10-24 WIB
-Status: DRAFT — detailed slice awaiting owner review. This is not implementation evidence or an approved implementation plan.
+Status: APPROVED DESIGN — owner approval received on 2026-10-24 (“Seruju”). This is not implementation evidence. The executable plan is `../plans/2026-10-24-settings-and-vision.md` and awaits its separate plan review; preserve the already selected hybrid workflow.
 Baseline: `85161559263424c4bb4e0ecc66309a78043733ca`
 
 ## Intent and inherited authorization
@@ -114,4 +114,4 @@ Repository observations above are from the baseline's actual source, not live de
 
 ## Review gate
 
-Requested decision: approve this detailed slice (one fixed owner/route, independent controls, image opt-in, versioned immutable jobs, explicit per-item retry and version-2 backup compatibility), or identify a change. After written-spec approval, write the executable implementation plan against current public interfaces and retain the already selected hybrid workflow. Production code, dependency installation and active deployment are not part of this draft.
+The owner approved this detailed design on 2026-10-24 with “Seruju”. Do not request this design approval or workflow selection again. The executable plan is `../plans/2026-10-24-settings-and-vision.md`; its separate review gate is pending. After that review, execute continuously using the retained hybrid/controller-TDD workflow. Approval and planning are not implementation or active-deployment evidence.
