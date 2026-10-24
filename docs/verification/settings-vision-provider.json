@@ -1,0 +1,29 @@
+{
+  "real_facade_attempt": true,
+  "active_installation_changed": false,
+  "trust_changed": false,
+  "credential_read_or_export_by_harness": false,
+  "registered_active_plugin": false,
+  "input_is_synthetic": true,
+  "provider_success_verified": false,
+  "retry_disclosure": "One facade call may cause multiple host provider attempts/fallback; no plugin no-retry promise.",
+  "checks": [
+    {
+      "lane": "text",
+      "state": "blocked",
+      "error_code": "trust_denied",
+      "error_type": "PluginLlmTrustError"
+    },
+    {
+      "lane": "image",
+      "state": "blocked",
+      "error_code": "trust_denied",
+      "error_type": "PluginLlmTrustError"
+    }
+  ],
+  "route": {
+    "provider": "xai-oauth",
+    "model": "grok-4.6"
+  },
+  "blocker": "Existing unmodified host policy/route did not verify both lanes; no fabricated result, credential copy, override grant or SDK fallback used."
+}

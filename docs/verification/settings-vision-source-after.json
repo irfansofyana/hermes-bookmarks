@@ -1,0 +1,156 @@
+{
+  "ok": true,
+  "actual_authenticated_host": true,
+  "read_only": true,
+  "synthetic": true,
+  "after_restart": true,
+  "fingerprint": {
+    "identity": {
+      "library_id": "e4a59314b9e5ceac2d8f4c3fd55fb0b2"
+    },
+    "settings": {
+      "revision": 11,
+      "settings": {
+        "automatic_summary": false,
+        "automatic_tags": false,
+        "guidance": "Browser saved despite lost acknowledgement",
+        "image_analysis": true,
+        "model": "synthetic",
+        "owner_profile": "default",
+        "paused": true,
+        "preferred_tags": [],
+        "provider": "fixture",
+        "retain_extracted_text": false,
+        "summary_language": "Indonesian",
+        "summary_length": "short"
+      },
+      "route_ready": true,
+      "restored_intent": null
+    },
+    "counts": {
+      "all": 3,
+      "inbox": 3,
+      "favorites": 0,
+      "read_later": 0,
+      "trash": 0
+    },
+    "items": [
+      {
+        "id": "36bd6b92-1052-43f0-95d7-318d6426a037",
+        "url": "https://example.org/synthetic-settings-check",
+        "title": "Synthetic library settings check",
+        "revision": 3,
+        "enrichment_status": "cancelled",
+        "summary": "Browser manual summary remains protected",
+        "tags": [],
+        "enrichment_job_id": "0fb3d3ba-1216-44ce-86d6-a6f994bcfb65",
+        "kind": "link",
+        "description": "",
+        "notes": "Keep personal fixture notes",
+        "collection_id": null,
+        "favorite": false,
+        "read_later": false,
+        "primary_asset_id": null,
+        "created_at": 1792850056.8900483,
+        "updated_at": 1792851004.4155076,
+        "deleted_at": null,
+        "processing_history": null,
+        "summary_source": "manual",
+        "summary_revision": 2,
+        "extracted_text": "",
+        "generated_provenance": null,
+        "tag_details": [],
+        "attachments": [],
+        "imported_sources": []
+      },
+      {
+        "id": "6f2c75cc-d431-4eab-89ea-76868c7a59a5",
+        "url": "https://example.org/synthetic-retained-fixture",
+        "title": "Synthetic retained source check",
+        "revision": 3,
+        "enrichment_status": "succeeded",
+        "summary": "",
+        "tags": [
+          "Synthetic fixture"
+        ],
+        "enrichment_job_id": "fa1c15a3-b098-44e5-ac7b-45e944874916",
+        "kind": "link",
+        "description": "",
+        "notes": "Imported fixture notes stay",
+        "collection_id": null,
+        "favorite": false,
+        "read_later": false,
+        "primary_asset_id": null,
+        "created_at": 1792850514.0874708,
+        "updated_at": 1792851009.8572812,
+        "deleted_at": null,
+        "processing_history": null,
+        "summary_source": "none",
+        "summary_revision": 0,
+        "extracted_text": "",
+        "generated_provenance": "{\"applied_fields\":[\"tags\"],\"conflicted_fields\":[],\"coverage\":\"extracted_text\",\"model\":\"synthetic-fixture-NOT-inference\",\"provider\":\"synthetic-fixture-NOT-inference\"}",
+        "tag_details": [
+          {
+            "name": "Synthetic fixture",
+            "source": "generated"
+          }
+        ],
+        "attachments": [],
+        "imported_sources": [
+          {
+            "source_id": "synthetic-source",
+            "source": "Synthetic acceptance fixture",
+            "locator": "fixture row",
+            "imported_summary": "Imported fixture summary stays",
+            "source_text": "Imported fixture source must stay"
+          }
+        ]
+      },
+      {
+        "id": "e11ebd41-6860-4d3c-9497-c1a9f559e544",
+        "url": null,
+        "title": "Synthetic blue pixel",
+        "revision": 1,
+        "enrichment_status": "cancelled",
+        "summary": "",
+        "tags": [],
+        "enrichment_job_id": "28fbedb7-742c-45ed-89d9-9fd46eee31be",
+        "kind": "image",
+        "description": "",
+        "notes": "",
+        "collection_id": null,
+        "favorite": false,
+        "read_later": false,
+        "primary_asset_id": "90a1fe3436774191a2e01018b6e2a863",
+        "created_at": 1792850057.1314278,
+        "updated_at": 1792850057.1314278,
+        "deleted_at": null,
+        "processing_history": null,
+        "summary_source": "none",
+        "summary_revision": 0,
+        "extracted_text": "",
+        "generated_provenance": null,
+        "tag_details": [],
+        "attachments": [
+          {
+            "asset_id": "90a1fe3436774191a2e01018b6e2a863",
+            "role": "primary",
+            "mime_type": "image/png",
+            "size": 70,
+            "width": 1,
+            "height": 1
+          }
+        ],
+        "imported_sources": []
+      }
+    ],
+    "assets": {
+      "90a1fe3436774191a2e01018b6e2a863": {
+        "mime_type": "image/png",
+        "size": 70,
+        "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "content_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/5ncLrgAAAABJRU5ErkJggg=="
+      }
+    }
+  }
+}

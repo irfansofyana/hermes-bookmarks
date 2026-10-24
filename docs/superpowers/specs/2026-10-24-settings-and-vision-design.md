@@ -1,7 +1,7 @@
 # Library settings and text/vision enrichment
 
 Date: 2026-10-24 WIB
-Status: APPROVED DESIGN — owner approval received on 2026-10-24 (“Seruju”). This is not implementation evidence. The executable plan is `../plans/2026-10-24-settings-and-vision.md` and awaits its separate plan review; preserve the already selected hybrid workflow.
+Status: APPROVED DESIGN AND PLAN — owner design approval received on 2026-10-24 (“Seruju”), followed by plan approval (“lanjut implementasi”). The executable plan is `../plans/2026-10-24-settings-and-vision.md`; execute continuously using the already selected hybrid workflow. Approval is not implementation acceptance; STATUS/verification record actual results.
 Baseline: `85161559263424c4bb4e0ecc66309a78043733ca`
 
 ## Intent and inherited authorization

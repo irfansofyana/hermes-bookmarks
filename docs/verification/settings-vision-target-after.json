@@ -1,0 +1,126 @@
+{
+  "ok": true,
+  "actual_authenticated_host": true,
+  "read_only": true,
+  "synthetic": true,
+  "after_restart": true,
+  "fingerprint": {
+    "identity": {
+      "library_id": "4e7f498a402e64b5a5c9ec52266c7335"
+    },
+    "settings": {
+      "revision": 2,
+      "settings": {
+        "automatic_summary": true,
+        "automatic_tags": true,
+        "guidance": "",
+        "image_analysis": false,
+        "model": "synthetic",
+        "owner_profile": "default",
+        "paused": false,
+        "preferred_tags": [],
+        "provider": "fixture",
+        "retain_extracted_text": false,
+        "summary_language": "auto",
+        "summary_length": "medium"
+      },
+      "route_ready": true,
+      "restored_intent": {
+        "automatic_summary": false,
+        "automatic_tags": false,
+        "guidance": "Synthetic verification only",
+        "image_analysis": true,
+        "model": "synthetic",
+        "owner_profile": "default",
+        "paused": true,
+        "preferred_tags": [],
+        "provider": "fixture",
+        "retain_extracted_text": false,
+        "summary_language": "Indonesian",
+        "summary_length": "short"
+      }
+    },
+    "counts": {
+      "all": 2,
+      "inbox": 2,
+      "favorites": 0,
+      "read_later": 0,
+      "trash": 0
+    },
+    "items": [
+      {
+        "id": "36bd6b92-1052-43f0-95d7-318d6426a037",
+        "url": "https://example.org/synthetic-settings-check",
+        "title": "Synthetic library settings check",
+        "revision": 2,
+        "enrichment_status": "cancelled",
+        "summary": "Manually reviewed fixture summary",
+        "tags": [],
+        "enrichment_job_id": null,
+        "kind": "link",
+        "description": "",
+        "notes": "Keep personal fixture notes",
+        "collection_id": null,
+        "favorite": false,
+        "read_later": false,
+        "primary_asset_id": null,
+        "created_at": 1792850056.8900483,
+        "updated_at": 1792850057.0255363,
+        "deleted_at": null,
+        "processing_history": null,
+        "summary_source": "manual",
+        "summary_revision": 1,
+        "extracted_text": "",
+        "generated_provenance": null,
+        "tag_details": [],
+        "attachments": [],
+        "imported_sources": []
+      },
+      {
+        "id": "e11ebd41-6860-4d3c-9497-c1a9f559e544",
+        "url": null,
+        "title": "Synthetic blue pixel",
+        "revision": 1,
+        "enrichment_status": "cancelled",
+        "summary": "",
+        "tags": [],
+        "enrichment_job_id": null,
+        "kind": "image",
+        "description": "",
+        "notes": "",
+        "collection_id": null,
+        "favorite": false,
+        "read_later": false,
+        "primary_asset_id": "90a1fe3436774191a2e01018b6e2a863",
+        "created_at": 1792850057.1314278,
+        "updated_at": 1792850057.1314278,
+        "deleted_at": null,
+        "processing_history": null,
+        "summary_source": "none",
+        "summary_revision": 0,
+        "extracted_text": "",
+        "generated_provenance": null,
+        "tag_details": [],
+        "attachments": [
+          {
+            "asset_id": "90a1fe3436774191a2e01018b6e2a863",
+            "role": "primary",
+            "mime_type": "image/png",
+            "size": 70,
+            "width": 1,
+            "height": 1
+          }
+        ],
+        "imported_sources": []
+      }
+    ],
+    "assets": {
+      "90a1fe3436774191a2e01018b6e2a863": {
+        "mime_type": "image/png",
+        "size": 70,
+        "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "content_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/5ncLrgAAAABJRU5ErkJggg=="
+      }
+    }
+  }
+}

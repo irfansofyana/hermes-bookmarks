@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-10-24T21:20:24.732151+07:00",
+  "code_head": "c599e1e0ae7ee55c36dbe1197ee7697654c962db",
+  "python": [
+    {
+      "version": "3.11.14",
+      "tests": 321,
+      "seconds": 71.91,
+      "passed": true,
+      "asyncio_slow_callback_lines": 13
+    },
+    {
+      "version": "3.14.7",
+      "tests": 321,
+      "seconds": 71.509,
+      "passed": true,
+      "asyncio_slow_callback_lines": 12
+    }
+  ],
+  "node": {
+    "version": "24.18.0",
+    "tests": 316,
+    "pass": 316,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "bundles": {
+    "desktop/plugin.js": {
+      "size": 261681,
+      "sha256": "edf8f00636edb05f51acf0e31f540f5f0d79b3f55aab9149a87af10314166bbc"
+    },
+    "dashboard/dist/index.js": {
+      "size": 260773,
+      "sha256": "f925119f2c5b00e0365c0c2523a13a09eb79046ed2b68d082d1fc5e8aab9e702"
+    }
+  },
+  "validator_ok": true,
+  "validator_warnings": [
+    "security scan caution: inline_shell_exec (index.js:54), inline_shell_exec (plugin.js:52)"
+  ],
+  "independent_review_head": "37e5e5ae378d9050ef0796293a696b748645c844",
+  "independent_verdict": "REQUEST CHANGES",
+  "important_findings": 2,
+  "critical_findings": 0,
+  "author_fix_head": "c599e1e0ae7ee55c36dbe1197ee7697654c962db",
+  "independent_reapproval": false,
+  "provider_success_verified": false,
+  "connected_electron_verified": false
+}

@@ -1,0 +1,144 @@
+{
+  "ok": true,
+  "actual_authenticated_host": true,
+  "provider_calls": false,
+  "checks": [
+    {
+      "check": "unauthenticated_settings_read_denied",
+      "ok": true
+    },
+    {
+      "check": "unauthenticated_settings_write_denied",
+      "ok": true
+    },
+    {
+      "check": "source_is_fresh_synthetic_library",
+      "ok": true
+    },
+    {
+      "check": "settings_save_readback_exact",
+      "ok": true
+    },
+    {
+      "check": "stale_settings_revision_conflicts",
+      "ok": true
+    },
+    {
+      "check": "owner_cannot_be_changed",
+      "ok": true
+    },
+    {
+      "check": "automatic_processing_independently_disabled",
+      "ok": true
+    },
+    {
+      "check": "enrichment_receipt_is_durable",
+      "ok": true
+    },
+    {
+      "check": "public_job_omits_lease_source_and_credentials",
+      "ok": true
+    },
+    {
+      "check": "pause_prevents_claim_or_missing_route_fails_without_provider",
+      "ok": true
+    },
+    {
+      "check": "cancel_is_idempotent",
+      "ok": true
+    },
+    {
+      "check": "manual_summary_is_protected",
+      "ok": true
+    },
+    {
+      "check": "source_clear_does_not_erase_notes_or_summary",
+      "ok": true
+    },
+    {
+      "check": "image_analysis_requires_library_opt_in",
+      "ok": true
+    },
+    {
+      "check": "opted_in_image_has_distinct_accepted_job",
+      "ok": true
+    },
+    {
+      "check": "field_order_is_canonical",
+      "ok": true
+    },
+    {
+      "check": "new_full_backup_is_version_two",
+      "ok": true
+    },
+    {
+      "check": "full_backup_integrity",
+      "ok": true
+    },
+    {
+      "check": "target_fresh",
+      "ok": true
+    },
+    {
+      "check": "restored_settings_remain_inert",
+      "ok": true
+    },
+    {
+      "check": "target_identity_preserved",
+      "ok": true
+    },
+    {
+      "check": "manual_summary_and_asset_restored",
+      "ok": true
+    }
+  ],
+  "settings": {
+    "revision": 4,
+    "settings": {
+      "automatic_summary": false,
+      "automatic_tags": false,
+      "guidance": "Synthetic verification only",
+      "image_analysis": true,
+      "model": "synthetic",
+      "owner_profile": "default",
+      "paused": true,
+      "preferred_tags": [],
+      "provider": "fixture",
+      "retain_extracted_text": false,
+      "summary_language": "Indonesian",
+      "summary_length": "short"
+    },
+    "route_ready": true,
+    "restored_intent": null
+  },
+  "link_id": "36bd6b92-1052-43f0-95d7-318d6426a037",
+  "image_id": "e11ebd41-6860-4d3c-9497-c1a9f559e544",
+  "request_ids": [
+    "a4eb91fe-069c-4ceb-b6c4-423e7119b03b",
+    "dabee192-cd95-49b4-8cfc-16ca45fe8068"
+  ],
+  "receipt": {
+    "request_id": "a4eb91fe-069c-4ceb-b6c4-423e7119b03b",
+    "item_id": "36bd6b92-1052-43f0-95d7-318d6426a037",
+    "accepted_revision": 1,
+    "job_id": "b977d696-b7c9-4b94-a699-89eee1df8d94",
+    "generation": 2,
+    "fields": [
+      "summary"
+    ],
+    "settings_revision": 3
+  },
+  "image_receipt": {
+    "request_id": "dabee192-cd95-49b4-8cfc-16ca45fe8068",
+    "item_id": "e11ebd41-6860-4d3c-9497-c1a9f559e544",
+    "accepted_revision": 1,
+    "job_id": "28fbedb7-742c-45ed-89d9-9fd46eee31be",
+    "generation": 2,
+    "fields": [
+      "summary",
+      "tags"
+    ],
+    "settings_revision": 4
+  },
+  "artifact_id": "4626023d16db42939c8fade2f90ea7d4"
+}
