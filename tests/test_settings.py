@@ -96,6 +96,23 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(outcomes.count('conflict'), 1)
         self.assertEqual(self.store().get()['revision'], 2)
 
+    def test_full_replacement_retires_both_inert_keys_even_when_options_match(self):
+        store=self.store();before=store.get()
+        with self.service._storage._transaction(write=True) as c:
+            c.execute("INSERT INTO library_config VALUES('restored_enrichment_settings',?)",(json.dumps(before['settings']),))
+            c.execute("INSERT INTO library_config VALUES('restored_enrichment_route',?)",(json.dumps({'provider':'fixture','model':'old','owner_profile':'foreign'}),))
+        self.assertIsNotNone(store.get()['restored_intent'])
+        # Partial edits and bootstrap are not approval to replace imported intent.
+        partial=store.update(before['revision'],{'paused':True})
+        self.assertIsNotNone(partial['restored_intent'])
+        full={key:value for key,value in partial['settings'].items() if key!='owner_profile'}
+        after=store.update(partial['revision'],full)
+        self.assertIsNone(after['restored_intent'])
+        self.assertEqual(after['revision'],partial['revision']+1)
+        with self.service._storage._transaction() as c:
+            self.assertEqual(c.execute("SELECT COUNT(*) FROM library_config WHERE key LIKE 'restored_enrichment_%'").fetchone()[0],0)
+        self.assertEqual(store.update(after['revision'],full),after)
+
     def test_live_legacy_route_can_seed_but_restored_route_cannot(self):
         from bookmarks.settings import read_settings
         with self.service._storage._transaction(write=True) as c:

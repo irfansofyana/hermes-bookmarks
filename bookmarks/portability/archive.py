@@ -25,7 +25,7 @@ MAX_ASSET_BYTES = 10 * 1024 * 1024
 MAX_PIXELS = 20_000_000
 TABLES = ('items', 'collections', 'tags', 'item_tags', 'item_assets', 'assets', 'sources')
 FORMAT = 'hermes-bookmarks-content'
-VERSION = 1
+VERSION = 2
 _ASSET_NAME = re.compile(r'assets/([a-f0-9]{32})\.blob\Z')
 _SHA256 = re.compile(r'[a-f0-9]{64}\Z')
 _FORMATS = {'PNG': 'image/png', 'JPEG': 'image/jpeg', 'WEBP': 'image/webp'}
@@ -37,11 +37,11 @@ BUNDLE_LIMITATIONS = [
 ]
 
 
-def _validate_content(data):
+def _validate_content(data, version=VERSION):
     # The content boundary is independent of the codec and may load later.
     from .content import validate_content
     try:
-        validate_content(data)
+        validate_content(data, version=version)
     except BookmarkError:
         raise ValueError('Invalid portable library content') from None
 
@@ -203,7 +203,7 @@ def write_bundle(target: Path, data: dict, read_asset, source_identity: str) -> 
 def _manifest(value):
     if set(value) != {'format', 'version', 'created_at', 'source_identity', 'counts', 'members'}:
         raise ValueError('Unsupported manifest fields')
-    if value['format'] != FORMAT or type(value['version']) is not int or value['version'] != VERSION:
+    if value['format'] != FORMAT or type(value['version']) is not int or value['version'] not in (1, 2):
         raise ValueError('Unsupported backup format version')
     if not isinstance(value['created_at'], str):
         raise ValueError('Invalid creation time')
@@ -363,7 +363,7 @@ def read_bundle(source: Path) -> tuple[dict, dict, dict]:
                     return raw
 
                 data = _json_load(verified('library.json'))
-                _validate_content(data)
+                _validate_content(data, version=manifest['version'])
                 if manifest['counts'] != _counts(data):
                     raise ValueError('Content counts do not match manifest')
                 expected_assets = {_asset_name(asset['id']) for asset in data['assets']}

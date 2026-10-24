@@ -78,7 +78,7 @@ class PortableArchiveTests(unittest.TestCase):
         self.assertEqual(assets, {})
         self.assertEqual(set(manifest), {'format', 'version', 'created_at', 'source_identity', 'counts', 'members'})
         self.assertEqual(manifest['format'], 'hermes-bookmarks-content')
-        self.assertEqual(manifest['version'], 1)
+        self.assertEqual(manifest['version'], 2)
         self.assertEqual(manifest['source_identity'], 'synthetic-library')
         self.assertEqual(result['counts'], {name: 0 for name in TABLES})
         self.assertTrue(any('unencrypted' in value.lower() for value in result['limitations']))
@@ -294,7 +294,7 @@ class PortableArchiveTests(unittest.TestCase):
 
     def test_rejects_unsupported_or_inexact_manifest(self):
         from bookmarks.portability.archive import read_bundle
-        changes = [lambda m: m.update(version=2), lambda m: m.update(version=True),
+        changes = [lambda m: m.update(version=3), lambda m: m.update(version=True),
                    lambda m: m.update(format='other'), lambda m: m.update(secret='not allowed'),
                    lambda m: m.update(created_at='invalid'), lambda m: m.update(source_identity=4),
                    lambda m: m['counts'].update(items=True), lambda m: m['counts'].update(items=1),

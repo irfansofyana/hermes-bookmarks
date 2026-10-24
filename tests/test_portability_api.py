@@ -12,7 +12,7 @@ class PortabilityAPITests(unittest.IsolatedAsyncioTestCase):
  async def test_export_native_http_parity_and_no_inference_activation(self):
   params={'format':'bundle','request_id':str(uuid4())}
   with patch('runtime.ensure_enrichment') as worker,patch('native_tools.ensure_enrichment') as native_worker:
-   native=await self.call('bookmark_export_create',params);self.assertTrue(native['ok'],native);self.assertEqual(native['result'].get('format_version'),1)
+   native=await self.call('bookmark_export_create',params);self.assertTrue(native['ok'],native);self.assertEqual(native['result'].get('format_version'),2)
    result=await self.client.post(PREFIX+'/exports',json=params);self.assertEqual(result.json(),native)
    status=await self.client.get(PREFIX+'/exports/requests/'+params['request_id']);self.assertEqual(status.json(),native)
    read=await self.client.get(PREFIX+'/exports/'+native['result']['id']+'?offset=0');self.assertEqual(read.json(),await self.call('bookmark_export_read',{'artifact_id':native['result']['id'],'offset':0}))

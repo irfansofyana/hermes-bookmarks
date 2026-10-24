@@ -156,7 +156,7 @@ class PortabilityStore:
 
  def export_create(self,format='bundle',include_trash=False,request_id=None):
   from .content import snapshot
-  from .archive import write_bundle,write_html
+  from .archive import VERSION,write_bundle,write_html
   from ..assets import AssetStore
   validate_operation_key(request_id)
   if format not in ('bundle','html') or type(include_trash) is not bool:raise ValidationError()
@@ -179,7 +179,7 @@ class PortabilityStore:
    size,digest=self._hash(key,'part')
    with self._file(key+'.part','r+b') as handle:handle.flush();os.fsync(handle.fileno())
    os.replace(target,self._path(key,'ready'));self._sync_directory(self.folder);self._sync_directory(self.root)
-   metadata={'format':format,'format_version':1 if format=='bundle' else None,'filename':'hermes-bookmarks-backup.zip' if format=='bundle' else 'hermes-bookmarks.html',
+   metadata={'format':format,'format_version':VERSION if format=='bundle' else None,'filename':'hermes-bookmarks-backup.zip' if format=='bundle' else 'hermes-bookmarks.html',
     'mime_type':'application/zip' if format=='bundle' else 'text/html',**details}
    with self.storage._transaction(write=True) as c:
     c.execute("UPDATE portability_ops SET state='ready',size=?,digest=?,metadata=? WHERE id=?",(size,digest,encoded(metadata),key))
@@ -269,7 +269,7 @@ class PortabilityStore:
    if not empty(c):raise ConflictError()
    prior=c.execute('SELECT report FROM portability_previews WHERE upload_id=?',(upload_id,)).fetchone()
    if prior:return json.loads(prior['report'])
-   key=uuid4().hex;report={'preview_id':key,'input_digest':row['digest'],'counts':counts,'empty_target':True,'format_version':1,
+   key=uuid4().hex;report={'preview_id':key,'input_digest':row['digest'],'counts':counts,'empty_target':True,'format_version':manifest['version'],
     'limitations':['Restore preserves this target library identity.','No chat sessions, credentials or queued execution are restored.','Saved routing intent is inert until explicitly configured.']}
    c.execute('INSERT INTO portability_previews VALUES(?,?,?,?,?)',(key,upload_id,row['digest'],row['expires_at'],encoded(report)))
    c.execute("UPDATE portability_ops SET state='sealed' WHERE id=?",(upload_id,))
@@ -336,7 +336,7 @@ class PortabilityStore:
    for key,raw in assets.items():
     self._publish_asset(asset_folder,key,raw,restore_id)
    self._sync_directory(asset_folder);self._sync_directory(self.root)
-   restore_content(c,data)
+   restore_content(c,data,version=manifest['version'])
    report={'id':restore_id,'state':'succeeded','counts':{key:len(value) for key,value in data.items() if isinstance(value,list)}}
    c.execute("UPDATE portability_restores SET state='succeeded',result=? WHERE id=?",(encoded(report),restore_id))
    return report

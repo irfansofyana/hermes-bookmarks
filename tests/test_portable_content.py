@@ -21,15 +21,15 @@ class PortableContentTests(unittest.TestCase):
         self.source = BookmarkService(self.root / 'source')
         self.target = BookmarkService(self.root / 'target')
 
-    def content(self, service=None):
+    def content(self, service=None, version=2):
         from bookmarks.portability.content import snapshot
         with (service or self.source)._storage._transaction() as c:
-            return snapshot(c)
+            return snapshot(c, version=version)
 
-    def restore(self, data, service=None):
+    def restore(self, data, service=None, version=2):
         from bookmarks.portability.content import restore_content
         with (service or self.target)._storage._transaction(write=True) as c:
-            restore_content(c, data)
+            restore_content(c, data, version=version)
 
     def fixture(self):
         s = self.source
@@ -95,10 +95,10 @@ class PortableContentTests(unittest.TestCase):
         with self.source._storage._transaction(write=True) as c:
             c.execute("UPDATE items SET enrichment_status='running',processing_history=? WHERE id=?", ('["failed"]',running['id']))
             c.execute("INSERT INTO library_config VALUES('secret_fixture','DO NOT COPY')")
-        data = self.content()
+        data = self.content(version=1)
         self.assertEqual(data['settings'], {'enrichment_route':route})
         self.assertNotIn('DO NOT COPY', json.dumps(data))
-        self.restore(data)
+        self.restore(data, version=1)
         for key, history in [(pending['id'], ['pending']), (running['id'], ['failed','running'])]:
             item = self.target.get(key)
             self.assertEqual(item['enrichment_status'], 'needs_review')
@@ -107,9 +107,9 @@ class PortableContentTests(unittest.TestCase):
         with self.target._storage._transaction() as c:
             self.assertIsNone(c.execute("SELECT value FROM library_config WHERE key='enrichment_route'").fetchone())
             self.assertEqual(json.loads(c.execute("SELECT value FROM library_config WHERE key='restored_enrichment_route'").fetchone()[0]),route)
-        self.assertEqual(self.content(self.target)['settings'], data['settings'])
+        self.assertEqual(self.content(self.target, version=1)['settings'], data['settings'])
         from bookmarks.portability.content import validate_content
-        validate_content(self.content(self.target))
+        validate_content(self.content(self.target, version=1), version=1)
 
     def test_empty_target_final_recheck_and_caller_rollback(self):
         from bookmarks.portability.content import restore_content, empty

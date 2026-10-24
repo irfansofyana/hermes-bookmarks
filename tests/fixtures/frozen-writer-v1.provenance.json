@@ -1,0 +1,12 @@
+{
+  "fixture_sha256": "6a0002c03f4ecfd7ec730ed288efabb6e9491771fd92367c74983a49a4878091",
+  "generator": "generate_v1_backup.py",
+  "method": "Pinned git archive; isolated subprocess runs old BookmarkService and PortabilityStore.export_create; frozen output bytes are copied unchanged.",
+  "synthetic_only": true,
+  "writer_commit": "85161559263424c4bb4e0ecc66309a78043733ca",
+  "writer_source_sha256": {
+    "bookmarks/portability/archive.py": "47a4ea695aceca50b70ea24239241202119f4b16eb5b238e8328e718a98c5572",
+    "bookmarks/portability/content.py": "9a2e4714c2e2da07319a1d7a33454f4530dc4c5241e8b338a003069b353539f1",
+    "bookmarks/portability/store.py": "ab9f4b5d59a42636cea72f0a2b64aef4e73ffda932079f3447c1ecd97a37e1cb"
+  }
+}

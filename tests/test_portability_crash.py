@@ -101,7 +101,7 @@ from pathlib import Path
 from bookmarks.service import BookmarkService
 from bookmarks.portability.store import PortabilityStore
 import bookmarks.portability.content as content
-content.restore_content=lambda *args:os._exit(19)
+content.restore_content=lambda *args,**kwargs:os._exit(19)
 PortabilityStore(BookmarkService(Path(sys.argv[1]))._storage).backup_restore(*sys.argv[2:])
 '''
    result=subprocess.run([sys.executable,'-B','-c',script,str(root/'target'),p['preview_id'],p['input_digest'],rid],cwd=Path(__file__).parents[1],timeout=20)

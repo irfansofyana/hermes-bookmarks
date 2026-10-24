@@ -130,7 +130,13 @@ class SettingsStore:
             current=read_settings(c)
             if current['revision']!=expected_revision: raise ConflictError(current['revision'])
             updated={**current['settings'],**changes}
-            if updated!=current['settings']:
+            # A full explicit Save replaces/adopts inert intent; initialization,
+            # bootstrap and partial control edits never imply that consent.
+            retire_intent=set(changes)==EDITABLE_FIELDS and c.execute(
+                "SELECT 1 FROM library_config WHERE key IN ('restored_enrichment_settings','restored_enrichment_route') LIMIT 1").fetchone() is not None
+            if updated!=current['settings'] or retire_intent:
                 if expected_revision==2**63-1: raise ConflictError(expected_revision)
                 persist(c,updated,expected_revision+1)
+                if retire_intent:
+                    c.execute("DELETE FROM library_config WHERE key IN ('restored_enrichment_settings','restored_enrichment_route')")
             return read_settings(c)
